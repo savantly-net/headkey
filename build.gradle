@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+// Read version from VERSION file
+def versionFile = file('VERSION')
+def projectVersion = versionFile.exists() ? versionFile.text.trim() : '0.1.0'
+
+allprojects {
+    group 'ai.headkey'
+    version = projectVersion
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+}
