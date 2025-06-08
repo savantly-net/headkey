@@ -9,7 +9,7 @@ Phase 2 of the HeadKey Memory System has been successfully implemented, providin
 All six core module interfaces have been implemented with full functionality:
 
 ### 1. InformationIngestionModule (IIM) ✅
-- **Implementation**: `InMemoryInformationIngestionModule`
+- **Implementation**: `InformationIngestionModuleImpl`
 - **Features**:
   - Complete ingestion pipeline orchestration (IIM → CCE → MES → BRCA)
   - Comprehensive input validation
@@ -51,7 +51,7 @@ All six core module interfaces have been implemented with full functionality:
   - Comprehensive belief statistics
 
 ### 5. RelevanceEvaluationForgettingAgent (REFA) ✅
-- **Implementation**: `InMemoryRelevanceEvaluationForgettingAgent`
+- **Implementation**: `RelevanceEvaluationForgettingAgentImpl`
 - **Features**:
   - Multi-factor relevance scoring (recency, frequency, importance, belief support)
   - Multiple forgetting strategies (age-based, relevance-based, usage-based, hybrid)

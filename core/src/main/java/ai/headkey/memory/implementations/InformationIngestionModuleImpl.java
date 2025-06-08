@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * In-memory implementation of the Information Ingestion Module (IIM).
+ * General implementation of the Information Ingestion Module (IIM).
  * 
  * This implementation orchestrates the complete memory ingestion pipeline
  * by coordinating the Contextual Categorization Engine (CCE), Memory Encoding
@@ -28,12 +28,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * The implementation provides comprehensive validation, error handling,
  * and statistics tracking while maintaining thread safety and performance.
  * 
- * Note: This implementation is designed for development, testing, and
- * demonstration purposes with in-memory storage and simple validation rules.
+ * This is a general-purpose implementation that can work with any service
+ * implementations injected through its constructor, making it suitable for
+ * both in-memory and persistent storage scenarios.
  * 
  * @since 1.0
  */
-public class InMemoryInformationIngestionModule implements InformationIngestionModule {
+public class InformationIngestionModuleImpl implements InformationIngestionModule {
     
     private final ContextualCategorizationEngine categorizationEngine;
     private final MemoryEncodingSystem encodingSystem;
@@ -61,13 +62,13 @@ public class InMemoryInformationIngestionModule implements InformationIngestionM
     private final Instant startTime;
     
     /**
-     * Creates a new in-memory ingestion module.
+     * Creates a new information ingestion module implementation.
      * 
      * @param categorizationEngine The categorization engine to use
      * @param encodingSystem The memory encoding system to use
      * @param beliefAnalyzer The belief analysis system to use
      */
-    public InMemoryInformationIngestionModule(
+    public InformationIngestionModuleImpl(
             ContextualCategorizationEngine categorizationEngine,
             MemoryEncodingSystem encodingSystem,
             BeliefReinforcementConflictAnalyzer beliefAnalyzer) {

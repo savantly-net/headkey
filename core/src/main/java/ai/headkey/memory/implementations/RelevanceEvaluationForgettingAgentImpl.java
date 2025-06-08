@@ -14,20 +14,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * In-memory implementation of the Relevance Evaluation & Forgetting Agent (REFA).
+ * General implementation of the Relevance Evaluation & Forgetting Agent (REFA).
  * 
  * This implementation provides comprehensive memory lifecycle management with
  * multiple forgetting strategies and configurable relevance evaluation.
  * It includes protection mechanisms, archiving capabilities, and detailed
  * statistics tracking.
  * 
- * Note: This implementation is designed for development, testing, and demonstration
- * purposes. A production system would likely use persistent storage for archives
- * and more sophisticated relevance algorithms.
+ * This is a general-purpose implementation that can work with any MemoryEncodingSystem
+ * implementation injected through its constructor, making it suitable for both
+ * in-memory and persistent storage scenarios.
  * 
  * @since 1.0
  */
-public class InMemoryRelevanceEvaluationForgettingAgent implements RelevanceEvaluationForgettingAgent {
+public class RelevanceEvaluationForgettingAgentImpl implements RelevanceEvaluationForgettingAgent {
     
     private final MemoryEncodingSystem memorySystem;
     private final Map<String, String> protectionRules;
@@ -55,11 +55,11 @@ public class InMemoryRelevanceEvaluationForgettingAgent implements RelevanceEval
     private final Instant startTime;
     
     /**
-     * Creates a new in-memory forgetting agent.
+     * Creates a new relevance evaluation forgetting agent implementation.
      * 
      * @param memorySystem The memory encoding system to work with
      */
-    public InMemoryRelevanceEvaluationForgettingAgent(MemoryEncodingSystem memorySystem) {
+    public RelevanceEvaluationForgettingAgentImpl(MemoryEncodingSystem memorySystem) {
         this.memorySystem = memorySystem;
         this.protectionRules = new ConcurrentHashMap<>();
         this.relevanceParameters = new ConcurrentHashMap<>();

@@ -86,13 +86,13 @@ public class InMemoryMemorySystemFactory {
     /**
      * Creates and returns a relevance evaluation forgetting agent.
      * 
-     * @return An instance of InMemoryRelevanceEvaluationForgettingAgent
+     * @return An instance of RelevanceEvaluationForgettingAgentImpl
      */
     public RelevanceEvaluationForgettingAgent createForgettingAgent() {
         if (forgettingAgent == null) {
             // The forgetting agent needs the memory encoding system
             MemoryEncodingSystem mes = createMemoryEncodingSystem();
-            forgettingAgent = new InMemoryRelevanceEvaluationForgettingAgent(mes);
+            forgettingAgent = new RelevanceEvaluationForgettingAgentImpl(mes);
         }
         return forgettingAgent;
     }
@@ -114,7 +114,7 @@ public class InMemoryMemorySystemFactory {
     /**
      * Creates and returns an information ingestion module.
      * 
-     * @return An instance of InMemoryInformationIngestionModule
+     * @return An instance of InformationIngestionModuleImpl
      */
     public InformationIngestionModule createIngestionModule() {
         if (ingestionModule == null) {
@@ -123,7 +123,7 @@ public class InMemoryMemorySystemFactory {
             MemoryEncodingSystem mes = createMemoryEncodingSystem();
             BeliefReinforcementConflictAnalyzer brca = createBeliefAnalyzer();
             
-            ingestionModule = new InMemoryInformationIngestionModule(cce, mes, brca);
+            ingestionModule = new InformationIngestionModuleImpl(cce, mes, brca);
         }
         return ingestionModule;
     }
