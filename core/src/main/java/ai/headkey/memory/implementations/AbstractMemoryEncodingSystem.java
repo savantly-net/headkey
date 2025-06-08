@@ -91,7 +91,13 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             return doEncodeAndStore(content, category, meta, embedding);
             
         } catch (Exception e) {
-            throw new StorageException("Failed to encode and store memory", e);
+            // Log the original exception for debugging
+            System.err.println("Detailed error in encodeAndStore: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            if (e.getCause() != null) {
+                System.err.println("Caused by: " + e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
+            }
+            e.printStackTrace();
+            throw new StorageException("Failed to encode and store memory: " + e.getMessage(), e);
         }
     }
     
@@ -104,7 +110,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             result.ifPresent(this::updateAccessStatistics);
             return result;
         } catch (Exception e) {
-            throw new StorageException("Failed to retrieve memory: " + memoryId, e);
+            System.err.println("Detailed error in getMemory for ID " + memoryId + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to retrieve memory: " + memoryId + " - " + e.getMessage(), e);
         }
     }
     
@@ -117,7 +124,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             results.values().forEach(this::updateAccessStatistics);
             return results;
         } catch (Exception e) {
-            throw new StorageException("Failed to retrieve memories", e);
+            System.err.println("Detailed error in getMemories: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to retrieve memories: " + e.getMessage(), e);
         }
     }
     
@@ -137,7 +145,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             return doUpdateMemory(memoryRecord, embedding);
             
         } catch (Exception e) {
-            throw new StorageException("Failed to update memory: " + memoryRecord.getId(), e);
+            System.err.println("Detailed error in updateMemory for ID " + memoryRecord.getId() + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to update memory: " + memoryRecord.getId() + " - " + e.getMessage(), e);
         }
     }
     
@@ -149,7 +158,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             totalDeletes.incrementAndGet();
             return doRemoveMemory(memoryId);
         } catch (Exception e) {
-            throw new StorageException("Failed to remove memory: " + memoryId, e);
+            System.err.println("Detailed error in removeMemory for ID " + memoryId + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to remove memory: " + memoryId + " - " + e.getMessage(), e);
         }
     }
     
@@ -161,7 +171,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             totalDeletes.addAndGet(memoryIds.size());
             return doRemoveMemories(memoryIds);
         } catch (Exception e) {
-            throw new StorageException("Failed to remove memories", e);
+            System.err.println("Detailed error in removeMemories: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to remove memories: " + e.getMessage(), e);
         }
     }
     
@@ -183,7 +194,8 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             return results;
             
         } catch (Exception e) {
-            throw new StorageException("Failed to search similar memories", e);
+            System.err.println("Detailed error in searchSimilar: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new StorageException("Failed to search similar memories: " + e.getMessage(), e);
         }
     }
     

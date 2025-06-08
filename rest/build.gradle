@@ -10,6 +10,15 @@ dependencies {
     implementation 'io.quarkus:quarkus-rest-jackson'
     implementation 'io.quarkus:quarkus-smallrye-openapi'
     implementation 'io.quarkus:quarkus-hibernate-validator'
+
+    implementation 'io.quarkiverse.langchain4j:quarkus-langchain4j-openai:1.0.0'
+
+    // JPA and Database dependencies
+    implementation 'io.quarkus:quarkus-hibernate-orm'
+    implementation 'io.quarkus:quarkus-jdbc-h2'
+    implementation 'io.quarkus:quarkus-jdbc-postgresql'
+    implementation 'io.quarkus:quarkus-agroal'
+
     implementation project(':api')
     implementation project(':core')
     testImplementation 'io.quarkus:quarkus-junit5'

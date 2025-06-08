@@ -37,7 +37,7 @@ public class CategoryLabel {
     private double confidence;
     
     /**
-     * Default constructor.
+     * Default constructor required by JPA and Jackson.
      */
     public CategoryLabel() {
         this.tags = new HashSet<>();
@@ -73,11 +73,11 @@ public class CategoryLabel {
      * @param tags Set of semantic tags
      * @param confidence Confidence score (0.0 to 1.0)
      */
-    public CategoryLabel(String primary, String secondary, Set<String> tags, double confidence) {
+    public CategoryLabel(String primary, String secondary, Set<String> tags, Double confidence) {
         this.primary = primary;
         this.secondary = secondary;
         this.tags = new HashSet<>(tags != null ? tags : new HashSet<>());
-        this.confidence = Math.max(0.0, Math.min(1.0, confidence)); // Clamp to [0.0, 1.0]
+        this.confidence = confidence != null ? Math.max(0.0, Math.min(1.0, confidence)) : 0.0; // Clamp to [0.0, 1.0]
     }
     
     /**
@@ -118,6 +118,7 @@ public class CategoryLabel {
      * Gets the full category path as a string.
      * 
      * @return A string representation of the category hierarchy
+     * @deprecated This method should not be serialized as a JSON property
      */
     public String getFullCategory() {
         if (primary == null) {
@@ -134,6 +135,7 @@ public class CategoryLabel {
      * 
      * @param threshold The confidence threshold (default 0.8 if not specified)
      * @return true if confidence is above the threshold
+     * @deprecated This method should not be serialized as a JSON property
      */
     public boolean isHighConfidence(double threshold) {
         return confidence >= threshold;
@@ -143,6 +145,7 @@ public class CategoryLabel {
      * Checks if this is a high-confidence categorization using default threshold of 0.8.
      * 
      * @return true if confidence is above 0.8
+     * @deprecated This method should not be serialized as a JSON property
      */
     public boolean isHighConfidence() {
         return isHighConfidence(0.8);

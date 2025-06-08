@@ -15,7 +15,7 @@ make_request() {
     local method=$1
     local endpoint=$2
     local data=$3
-    
+
     echo "📡 $method $endpoint"
     if [ -n "$data" ]; then
         curl -s -X "$method" \

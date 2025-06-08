@@ -35,6 +35,17 @@ public class CategoryLabelConverter implements AttributeConverter<CategoryLabel,
         objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED, false);
         objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
         objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        
+        // Configure visibility to only use fields and ignore all getters/setters/is-getters
+        objectMapper.setVisibility(com.fasterxml.jackson.annotation.PropertyAccessor.ALL, com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.NONE);
+        objectMapper.setVisibility(com.fasterxml.jackson.annotation.PropertyAccessor.FIELD, com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY);
+        
+        // Disable auto-detection of getters completely
+        objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.AUTO_DETECT_GETTERS, false);
+        objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.AUTO_DETECT_IS_GETTERS, false);
+        objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.AUTO_DETECT_SETTERS, false);
+        objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.AUTO_DETECT_FIELDS, true);
     }
     
     /**
@@ -53,7 +64,15 @@ public class CategoryLabelConverter implements AttributeConverter<CategoryLabel,
         try {
             return objectMapper.writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to convert CategoryLabel to JSON", e);
+            System.err.println("ERROR: Failed to serialize CategoryLabel: " + attribute);
+            System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to convert CategoryLabel to JSON: " + e.getMessage(), e);
+        } catch (Exception e) {
+            System.err.println("ERROR: Unexpected error serializing CategoryLabel: " + attribute);
+            System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Unexpected error converting CategoryLabel to JSON: " + e.getMessage(), e);
         }
     }
     
@@ -73,7 +92,15 @@ public class CategoryLabelConverter implements AttributeConverter<CategoryLabel,
         try {
             return objectMapper.readValue(dbData, CategoryLabel.class);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to convert JSON to CategoryLabel", e);
+            System.err.println("ERROR: Failed to deserialize CategoryLabel from JSON: " + dbData);
+            System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to convert JSON to CategoryLabel: " + e.getMessage(), e);
+        } catch (Exception e) {
+            System.err.println("ERROR: Unexpected error deserializing CategoryLabel from JSON: " + dbData);
+            System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Unexpected error converting JSON to CategoryLabel: " + e.getMessage(), e);
         }
     }
 }

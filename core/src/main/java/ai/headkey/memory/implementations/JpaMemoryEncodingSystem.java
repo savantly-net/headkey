@@ -139,16 +139,34 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
     @Override
     protected MemoryRecord doEncodeAndStore(String content, CategoryLabel category, 
                                           Metadata meta, double[] embedding) {
-        EntityManager em = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = em.getTransaction();
+        EntityManager em = null;
+        EntityTransaction transaction = null;
+        MemoryEntity entity = null;
         
         try {
+            // Validate inputs more thoroughly
+            if (content == null || content.trim().isEmpty()) {
+                throw new IllegalArgumentException("Content cannot be null or empty");
+            }
+            if (category == null) {
+                throw new IllegalArgumentException("Category cannot be null");
+            }
+            if (meta == null) {
+                throw new IllegalArgumentException("Metadata cannot be null");
+            }
+            
+            em = entityManagerFactory.createEntityManager();
+            transaction = em.getTransaction();
+            
             transaction.begin();
             
             // Create new memory entity
-            MemoryEntity entity = new MemoryEntity();
-            entity.setId(generateMemoryId());
-            entity.setAgentId(getAgentIdFromMetadata(meta));
+            entity = new MemoryEntity();
+            String memoryId = generateMemoryId();
+            String agentId = getAgentIdFromMetadata(meta);
+            
+            entity.setId(memoryId);
+            entity.setAgentId(agentId);
             entity.setContent(content);
             entity.setCategory(category);
             entity.setMetadata(meta);
@@ -166,12 +184,34 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
             return entity.toMemoryRecord();
             
         } catch (Exception e) {
-            if (transaction.isActive()) {
-                transaction.rollback();
+            System.err.println("DETAILED ERROR in doEncodeAndStore:");
+            System.err.println("  Exception: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            System.err.println("  Memory ID: " + (entity != null ? entity.getId() : "null"));
+            System.err.println("  Agent ID: " + (entity != null ? entity.getAgentId() : "null"));
+            System.err.println("  Content length: " + (content != null ? content.length() : "null"));
+            if (e.getCause() != null) {
+                System.err.println("  Root cause: " + e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
             }
-            throw new StorageException("Failed to store memory", e);
+            e.printStackTrace();
+            
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackException) {
+                    System.err.println("ERROR during rollback: " + rollbackException.getMessage());
+                }
+            }
+            
+            // Re-throw with more context
+            throw new StorageException("Failed to store memory - " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         } finally {
-            em.close();
+            if (em != null) {
+                try {
+                    em.close();
+                } catch (Exception closeException) {
+                    System.err.println("ERROR closing EntityManager: " + closeException.getMessage());
+                }
+            }
         }
     }
     

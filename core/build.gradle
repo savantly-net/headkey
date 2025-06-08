@@ -16,19 +16,19 @@ dependencies {
     api 'org.hsqldb:hsqldb:2.7.2'
     api 'org.postgresql:postgresql:42.7.1'
     api 'com.zaxxer:HikariCP:5.1.0'
-    
+
     // Jakarta Persistence dependencies
     api 'jakarta.persistence:jakarta.persistence-api:3.1.0'
     api 'org.hibernate:hibernate-core:6.4.1.Final'
     api 'org.hibernate:hibernate-hikaricp:6.4.1.Final'
-    
+
     // Jackson for JSON processing
     api 'com.fasterxml.jackson.core:jackson-core:2.17.0'
     api 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
     api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0'
 
-    testImplementation 'dev.langchain4j:langchain4j-anthropic'
-    
+    testImplementation 'dev.langchain4j:langchain4j-openai'
+
     // H2 Database for testing
     testImplementation 'com.h2database:h2:2.2.224'
 

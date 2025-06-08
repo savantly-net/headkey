@@ -49,7 +49,7 @@ public class Metadata {
     private Integer accessCount;
     
     /**
-     * Default constructor.
+     * Default constructor required by JPA and Jackson.
      */
     public Metadata() {
         this.properties = new HashMap<>();
@@ -62,7 +62,7 @@ public class Metadata {
      * @param properties Initial properties map
      */
     public Metadata(Map<String, Object> properties) {
-        this.properties = new HashMap<>(properties);
+        this.properties = new HashMap<>(properties != null ? properties : new HashMap<>());
         this.accessCount = 0;
     }
     
