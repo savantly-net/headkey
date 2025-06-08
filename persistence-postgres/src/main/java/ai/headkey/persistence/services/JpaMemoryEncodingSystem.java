@@ -1,5 +1,6 @@
-package ai.headkey.memory.implementations;
+package ai.headkey.persistence.services;
 
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;

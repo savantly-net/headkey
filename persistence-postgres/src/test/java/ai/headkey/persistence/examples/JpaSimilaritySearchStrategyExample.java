@@ -1,9 +1,9 @@
-package ai.headkey.memory.examples;
+package ai.headkey.persistence.examples;
 
 import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.implementations.AbstractMemoryEncodingSystem;
-import ai.headkey.memory.implementations.JpaMemoryEncodingSystem;
-import ai.headkey.memory.implementations.JpaMemorySystemFactory;
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.memory.strategies.jpa.*;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;

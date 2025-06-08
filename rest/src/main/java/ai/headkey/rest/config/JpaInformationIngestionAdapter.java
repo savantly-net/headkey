@@ -7,7 +7,7 @@ import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.InvalidInputException;
 import ai.headkey.memory.exceptions.StorageException;
-import ai.headkey.memory.implementations.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
 import org.jboss.logging.Logger;
 

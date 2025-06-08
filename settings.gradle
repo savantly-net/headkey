@@ -10,4 +10,4 @@ pluginManagement {
 }
 rootProject.name='headkey'
 
-include('api', 'core', 'langchain4j', 'rest')
+include('api', 'core', 'langchain4j', 'persistence-postgres', 'rest')

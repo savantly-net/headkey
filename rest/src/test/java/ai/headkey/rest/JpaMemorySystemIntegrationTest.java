@@ -1,6 +1,6 @@
 package ai.headkey.rest;
 
-import ai.headkey.memory.implementations.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
 import ai.headkey.rest.config.MemorySystemProperties;
 import ai.headkey.rest.dto.MemoryIngestionRequest;

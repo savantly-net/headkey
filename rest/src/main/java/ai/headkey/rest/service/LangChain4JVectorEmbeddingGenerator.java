@@ -1,6 +1,6 @@
 package ai.headkey.rest.service;
 
-import ai.headkey.memory.implementations.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.output.Response;

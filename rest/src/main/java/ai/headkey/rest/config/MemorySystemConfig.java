@@ -1,8 +1,8 @@
 package ai.headkey.rest.config;
 
-import ai.headkey.memory.implementations.AbstractMemoryEncodingSystem;
-import ai.headkey.memory.implementations.JpaMemoryEncodingSystem;
-import ai.headkey.memory.implementations.JpaMemorySystemFactory;
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
 import ai.headkey.memory.interfaces.MemoryEncodingSystem;
 import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategy;

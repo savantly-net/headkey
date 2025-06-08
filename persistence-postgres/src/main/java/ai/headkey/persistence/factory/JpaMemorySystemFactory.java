@@ -1,11 +1,13 @@
-package ai.headkey.memory.implementations;
+package ai.headkey.persistence.factory;
 
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.interfaces.MemoryEncodingSystem;
 import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategy;
 import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import ai.headkey.memory.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.memory.strategies.jpa.PostgresJpaSimilaritySearchStrategy;
 import ai.headkey.memory.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 

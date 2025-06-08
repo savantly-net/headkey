@@ -1,7 +1,7 @@
 package ai.headkey.rest;
 
-import ai.headkey.memory.implementations.JpaMemoryEncodingSystem;
-import ai.headkey.memory.implementations.JpaMemorySystemFactory;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import ai.headkey.rest.config.MemorySystemProperties;
 import jakarta.enterprise.context.ApplicationScoped;

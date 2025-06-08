@@ -1,0 +1,69 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation project(':api')
+    implementation project(':core')
+    implementation project(':langchain4j')
+
+    // LangChain4J BOM for consistent version management
+    api platform('dev.langchain4j:langchain4j-bom:1.0.0')
+
+    // LangChain4J dependencies - versions managed by BOM
+    api 'dev.langchain4j:langchain4j'
+    api 'dev.langchain4j:langchain4j-core'
+
+    // JPA/Hibernate dependencies
+    api 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+    api 'org.hibernate:hibernate-core:6.4.4.Final'
+    api 'org.hibernate:hibernate-hikaricp:6.4.4.Final'
+
+    // PostgreSQL driver
+    api 'org.postgresql:postgresql:42.7.2'
+
+    // Connection pooling
+    api 'com.zaxxer:HikariCP:5.0.1'
+
+    // Transaction support
+    api 'jakarta.transaction:jakarta.transaction-api:2.0.1'
+
+    // Bean Validation
+    api 'jakarta.validation:jakarta.validation-api:3.0.2'
+    api 'org.hibernate.validator:hibernate-validator:8.0.0.Final'
+
+    // Jackson for JSON processing
+    api 'com.fasterxml.jackson.core:jackson-core:2.17.0'
+    api 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0'
+
+    // Logging
+    api 'org.slf4j:slf4j-api:2.0.9'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    // TestContainers for integration tests
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    
+    // Test database
+    testImplementation 'com.h2database:h2:2.2.224'
+    
+    // Mockito for unit tests
+    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}
