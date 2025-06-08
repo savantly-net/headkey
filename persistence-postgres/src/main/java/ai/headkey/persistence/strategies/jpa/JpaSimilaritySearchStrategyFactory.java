@@ -1,4 +1,4 @@
-package ai.headkey.memory.strategies.jpa;
+package ai.headkey.persistence.strategies.jpa;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;

@@ -1,4 +1,4 @@
-package ai.headkey.memory.entities.converters;
+package ai.headkey.persistence.entities.converters;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

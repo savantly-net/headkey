@@ -1,11 +1,11 @@
-package ai.headkey.memory.entities;
+package ai.headkey.persistence.entities;
 
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
-import ai.headkey.memory.entities.converters.CategoryLabelConverter;
-import ai.headkey.memory.entities.converters.MetadataConverter;
-import ai.headkey.memory.entities.converters.VectorEmbeddingConverter;
+import ai.headkey.persistence.entities.converters.CategoryLabelConverter;
+import ai.headkey.persistence.entities.converters.MetadataConverter;
+import ai.headkey.persistence.entities.converters.VectorEmbeddingConverter;
 import jakarta.persistence.*;
 
 import java.time.Instant;

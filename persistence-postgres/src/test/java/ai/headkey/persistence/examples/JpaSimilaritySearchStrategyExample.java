@@ -4,7 +4,7 @@ import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.factory.JpaMemorySystemFactory;
-import ai.headkey.memory.strategies.jpa.*;
+import ai.headkey.persistence.strategies.jpa.*;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 

@@ -9,7 +9,9 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         
         <!-- Entity Classes -->
-        <class>ai.headkey.memory.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
         
         <!-- Exclude unlisted classes to improve startup time -->
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
@@ -59,7 +61,9 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         
         <!-- Entity Classes -->
-        <class>ai.headkey.memory.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
         
         <!-- Exclude unlisted classes -->
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
@@ -91,7 +95,9 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         
         <!-- Entity Classes -->
-        <class>ai.headkey.memory.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
         
         <!-- Exclude unlisted classes -->
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
@@ -131,7 +137,9 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         
         <!-- Entity Classes -->
-        <class>ai.headkey.memory.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
         
         <!-- Exclude unlisted classes -->
         <exclude-unlisted-classes>true</exclude-unlisted-classes>

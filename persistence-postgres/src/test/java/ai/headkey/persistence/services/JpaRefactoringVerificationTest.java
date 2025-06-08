@@ -1,10 +1,10 @@
-package ai.headkey.memory.implementations;
+package ai.headkey.persistence.services;
 
 import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
-import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategy;
-import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategyFactory;
-import ai.headkey.memory.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
+import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import org.junit.jupiter.api.*;

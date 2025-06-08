@@ -1,9 +1,9 @@
-package ai.headkey.memory.implementations;
+package ai.headkey.persistence.services;
 
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
-import ai.headkey.memory.entities.MemoryEntity;
+import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
 import jakarta.persistence.EntityManager;

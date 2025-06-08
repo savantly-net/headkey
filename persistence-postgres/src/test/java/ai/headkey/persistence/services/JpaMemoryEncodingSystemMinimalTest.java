@@ -1,4 +1,4 @@
-package ai.headkey.memory.implementations;
+package ai.headkey.persistence.services;
 
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;

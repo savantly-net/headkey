@@ -1,7 +1,7 @@
-package ai.headkey.memory.strategies.jpa;
+package ai.headkey.persistence.strategies.jpa;
 
 import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.entities.MemoryEntity;
+import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.memory.exceptions.StorageException;
 
 import jakarta.persistence.EntityManager;

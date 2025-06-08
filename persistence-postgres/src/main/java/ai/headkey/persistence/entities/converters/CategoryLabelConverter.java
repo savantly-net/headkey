@@ -1,6 +1,6 @@
-package ai.headkey.memory.entities.converters;
+package ai.headkey.persistence.entities.converters;
 
-import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.dto.CategoryLabel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -10,19 +10,19 @@ import jakarta.persistence.Converter;
 import java.io.IOException;
 
 /**
- * JPA AttributeConverter for Metadata to JSON conversion.
+ * JPA AttributeConverter for CategoryLabel to JSON conversion.
  * 
- * This converter handles the serialization and deserialization of Metadata
+ * This converter handles the serialization and deserialization of CategoryLabel
  * objects to/from JSON strings for database storage. It uses Jackson ObjectMapper
  * for reliable JSON processing and handles null values gracefully.
  * 
- * The converter is automatically applied to all Metadata fields in JPA entities
+ * The converter is automatically applied to all CategoryLabel fields in JPA entities
  * due to the @Converter(autoApply = true) annotation.
  * 
  * @since 1.0
  */
 @Converter(autoApply = true)
-public class MetadataConverter implements AttributeConverter<Metadata, String> {
+public class CategoryLabelConverter implements AttributeConverter<CategoryLabel, String> {
     
     private static final ObjectMapper objectMapper;
     
@@ -32,7 +32,6 @@ public class MetadataConverter implements AttributeConverter<Metadata, String> {
         // Configure ObjectMapper to handle various edge cases
         objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED, false);
         objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
         objectMapper.configure(com.fasterxml.jackson.databind.MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
@@ -50,14 +49,14 @@ public class MetadataConverter implements AttributeConverter<Metadata, String> {
     }
     
     /**
-     * Converts Metadata object to JSON string for database storage.
+     * Converts CategoryLabel object to JSON string for database storage.
      * 
-     * @param attribute The Metadata object to convert
+     * @param attribute The CategoryLabel object to convert
      * @return JSON string representation, or null if attribute is null
      * @throws RuntimeException if JSON serialization fails
      */
     @Override
-    public String convertToDatabaseColumn(Metadata attribute) {
+    public String convertToDatabaseColumn(CategoryLabel attribute) {
         if (attribute == null) {
             return null;
         }
@@ -65,43 +64,43 @@ public class MetadataConverter implements AttributeConverter<Metadata, String> {
         try {
             return objectMapper.writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            System.err.println("ERROR: Failed to serialize Metadata: " + attribute);
+            System.err.println("ERROR: Failed to serialize CategoryLabel: " + attribute);
             System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to convert Metadata to JSON: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to convert CategoryLabel to JSON: " + e.getMessage(), e);
         } catch (Exception e) {
-            System.err.println("ERROR: Unexpected error serializing Metadata: " + attribute);
+            System.err.println("ERROR: Unexpected error serializing CategoryLabel: " + attribute);
             System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Unexpected error converting Metadata to JSON: " + e.getMessage(), e);
+            throw new RuntimeException("Unexpected error converting CategoryLabel to JSON: " + e.getMessage(), e);
         }
     }
     
     /**
-     * Converts JSON string from database to Metadata object.
+     * Converts JSON string from database to CategoryLabel object.
      * 
      * @param dbData The JSON string from database
-     * @return Metadata object, or null if dbData is null or empty
+     * @return CategoryLabel object, or null if dbData is null or empty
      * @throws RuntimeException if JSON deserialization fails
      */
     @Override
-    public Metadata convertToEntityAttribute(String dbData) {
+    public CategoryLabel convertToEntityAttribute(String dbData) {
         if (dbData == null || dbData.trim().isEmpty()) {
             return null;
         }
         
         try {
-            return objectMapper.readValue(dbData, Metadata.class);
+            return objectMapper.readValue(dbData, CategoryLabel.class);
         } catch (IOException e) {
-            System.err.println("ERROR: Failed to deserialize Metadata from JSON: " + dbData);
+            System.err.println("ERROR: Failed to deserialize CategoryLabel from JSON: " + dbData);
             System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to convert JSON to Metadata: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to convert JSON to CategoryLabel: " + e.getMessage(), e);
         } catch (Exception e) {
-            System.err.println("ERROR: Unexpected error deserializing Metadata from JSON: " + dbData);
+            System.err.println("ERROR: Unexpected error deserializing CategoryLabel from JSON: " + dbData);
             System.err.println("ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Unexpected error converting JSON to Metadata: " + e.getMessage(), e);
+            throw new RuntimeException("Unexpected error converting JSON to CategoryLabel: " + e.getMessage(), e);
         }
     }
 }

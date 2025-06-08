@@ -4,11 +4,11 @@ import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
-import ai.headkey.memory.entities.MemoryEntity;
+import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
-import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategy;
-import ai.headkey.memory.strategies.jpa.JpaSimilaritySearchStrategyFactory;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 
