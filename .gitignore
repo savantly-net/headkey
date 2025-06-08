@@ -43,3 +43,4 @@ nb-configuration.xml
 dev.properties
 local.mk
 target/
+*.log
