@@ -153,7 +153,7 @@ export default function FeatureComparison() {
         <div className="text-center">
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Feature Comparison</h3>
           <p className="text-gray-600">
-            See how HeadKey's CIBFE architecture compares to traditional solutions
+            See how HeadKey&apos;s CIBFE architecture compares to traditional solutions
           </p>
         </div>
       </div>
@@ -228,7 +228,7 @@ export default function FeatureComparison() {
       <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-4">
-            Ready to join the future of AI memory management?
+            Ready to experience the future of AI memory management?
           </p>
           <div className="flex justify-center space-x-4">
             <button className="btn-primary">

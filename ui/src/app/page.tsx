@@ -1,17 +1,14 @@
 "use client";
 
-import { Fragment } from "react";
+import Link from "next/link";
 import {
   ArrowRightIcon,
   BoltIcon,
   ShieldCheckIcon,
   CpuChipIcon,
   CloudIcon,
-  ChartBarIcon,
   CogIcon,
-  UserGroupIcon,
   CheckIcon,
-  StarIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
 import {
@@ -21,8 +18,6 @@ import {
   FilterIcon,
   NetworkIcon,
   ZapIcon,
-  LockIcon,
-  TrendingUpIcon,
 } from "lucide-react";
 import InteractiveDemo from "@/components/InteractiveDemo";
 import ApiExplorer from "@/components/ApiExplorer";
@@ -235,7 +230,7 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-4">
               <button className="btn-ghost">Sign In</button>
-              <button className="btn-primary">Get Started</button>
+              <Link href="/contact" className="btn-primary">Get Started</Link>
             </div>
           </div>
         </div>
@@ -265,14 +260,14 @@ export default function HomePage() {
             </p>
 
             <div className="fade-in fade-in-delay-3 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button className="btn-primary text-lg px-8 py-4 group">
-                Join Beta Program
-                <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button className="btn-secondary text-lg px-8 py-4 group">
-                <PlayIcon className="mr-2 w-5 h-5" />
-                Watch Demo
-              </button>
+              <Link href="/contact" className="btn-primary text-lg px-8 py-4 group">
+            Join Beta Program
+            <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <Link href="/contact" className="btn-secondary text-lg px-8 py-4 group">
+            <PlayIcon className="mr-2 w-5 h-5" />
+            Watch Demo
+          </Link>
             </div>
 
             <div className="mt-16 fade-in fade-in-delay-3">
@@ -315,7 +310,7 @@ export default function HomePage() {
               Six Powerful Modules, One Intelligent System
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto text-balance">
-              HeadKey's CIBFE architecture provides comprehensive memory
+              HeadKey&apos;s CIBFE architecture provides comprehensive memory
               management through six specialized modules that work together to
               create the most advanced AI memory system available.
             </p>
@@ -475,7 +470,7 @@ export default function HomePage() {
               Built on Proven Principles
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              HeadKey's CIBFE architecture is designed around core principles
+              HeadKey&apos;s CIBFE architecture is designed around core principles
               that ensure reliability, performance, and scalability for
               enterprise AI applications.
             </p>
@@ -509,7 +504,7 @@ export default function HomePage() {
               Early Access Pricing
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Get early access to HeadKey's revolutionary CIBFE architecture.
+              Get early access to HeadKey&apos;s revolutionary CIBFE architecture.
               Join our beta program and help shape the future of AI memory
               management.
             </p>
@@ -553,13 +548,14 @@ export default function HomePage() {
                   ))}
                 </ul>
 
-                <button
+                <Link
+                  href="/contact"
                   className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 ${
                     tier.popular ? "btn-primary" : "btn-secondary"
-                  }`}
+                  } text-center block`}
                 >
                   {tier.cta}
-                </button>
+                </Link>
               </div>
             ))}
           </div>
@@ -574,7 +570,7 @@ export default function HomePage() {
               Why Choose HeadKey?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto text-balance">
-              See how HeadKey's revolutionary CIBFE architecture outperforms
+              See how HeadKey&apos;s revolutionary CIBFE architecture outperforms
               traditional memory solutions with advanced features designed for
               modern AI applications.
             </p>
@@ -592,17 +588,17 @@ export default function HomePage() {
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto text-balance">
             Join our exclusive beta program and be among the first to experience
-            HeadKey's revolutionary CIBFE architecture. Help us build the future
+            HeadKey&apos;s revolutionary CIBFE architecture. Help us build the future
             of AI memory management.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button className="btn-primary text-lg px-8 py-4 group">
+            <Link href="/contact" className="btn-primary text-lg px-8 py-4 group">
               Join Beta Program
               <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="btn-ghost text-lg px-8 py-4">
+            </Link>
+            <Link href="/contact" className="btn-ghost text-lg px-8 py-4">
               Schedule Demo
-            </button>
+            </Link>
           </div>
           <p className="text-sm text-gray-500 mt-6">
             No credit card required • Early access • Limited beta spots
@@ -673,12 +669,12 @@ export default function HomePage() {
               <h3 className="text-white font-semibold mb-4">Company</h3>
               <ul className="space-y-2">
                 <li>
-                  <a
+                  <Link
                     href="/about"
                     className="hover:text-white transition-colors"
                   >
                     About
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a href="#" className="hover:text-white transition-colors">
@@ -691,12 +687,12 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a
+                  <Link
                     href="/contact"
                     className="hover:text-white transition-colors"
                   >
                     Contact
-                  </a>
+                  </Link>
                 </li>
               </ul>
               <div className="mt-6">

@@ -1,13 +1,14 @@
-"use client";
+'use client';
 
-import {
+import { 
   CheckCircleIcon,
   EnvelopeIcon,
   ClockIcon,
   ArrowLeftIcon,
-  ChatBubbleLeftRightIcon,
-} from "@heroicons/react/24/outline";
-import { BrainCircuitIcon } from "lucide-react";
+  ChatBubbleLeftRightIcon
+} from '@heroicons/react/24/outline';
+import { BrainCircuitIcon } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ThankYouPage() {
   return (
@@ -17,19 +18,19 @@ export default function ThankYouPage() {
         <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
-              <a href="/" className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-2">
                 <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
                   <BrainCircuitIcon className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold gradient-text">HeadKey</span>
-              </a>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <a href="/" className="btn-ghost">
+              <Link href="/" className="btn-ghost">
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
                 Back to Home
-              </a>
-              <button className="btn-primary">Join Beta</button>
+              </Link>
+              <Link href="/contact" className="btn-primary">Join Beta</Link>
             </div>
           </div>
         </div>
@@ -54,7 +55,7 @@ export default function ThankYouPage() {
           {/* Success Message */}
           <div className="mb-12">
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-              We've successfully received your message and our team will review
+              We&apos;ve successfully received your message and our team will review
               it shortly. We typically respond within 24 hours during business
               days.
             </p>
@@ -66,8 +67,8 @@ export default function ThankYouPage() {
               </div>
               <div className="text-sm text-blue-700 space-y-2">
                 <p>• Our team will review your inquiry</p>
-                <p>• You'll receive a response within 24 hours</p>
-                <p>• For urgent matters, we'll prioritize accordingly</p>
+                <p>• You&apos;ll receive a response within 24 hours</p>
+                <p>• For urgent matters, we&apos;ll prioritize accordingly</p>
               </div>
             </div>
           </div>
@@ -88,12 +89,12 @@ export default function ThankYouPage() {
                   Learn more about our revolutionary CIBFE architecture and how
                   it can transform your AI applications.
                 </p>
-                <a
+                <Link
                   href="/"
                   className="text-purple-600 hover:text-purple-700 text-sm font-medium"
                 >
                   Visit Homepage →
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white border border-gray-200 rounded-xl p-6 text-left">
@@ -106,12 +107,12 @@ export default function ThankYouPage() {
                   </h3>
                 </div>
                 <p className="text-gray-600 mb-4 text-sm">
-                  Get early access to HeadKey's beta platform and be among the
+                  Get early access to HeadKey&apos;s beta platform and be among the
                   first to experience our technology.
                 </p>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                <Link href="/contact" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                   Join Beta →
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -156,13 +157,13 @@ export default function ThankYouPage() {
                 <span>hello@headkey.ai</span>
               </a>
               <span className="hidden sm:block text-gray-300">|</span>
-              <a
-                href="/contact"
+              <Link 
+                href="/contact" 
                 className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
               >
                 <ChatBubbleLeftRightIcon className="w-4 h-4" />
                 <span>Live Chat</span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>

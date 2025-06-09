@@ -1,15 +1,15 @@
 "use client";
 
-import {
-  UserGroupIcon,
-  BuildingOfficeIcon,
+import { 
+  UserGroupIcon, 
   GlobeAltIcon,
   LightBulbIcon,
   ShieldCheckIcon,
-  BoltIcon,
-} from "@heroicons/react/24/outline";
-import { BrainCircuitIcon } from "lucide-react";
-import ContactCTA from "@/components/ContactCTA";
+  BoltIcon
+} from '@heroicons/react/24/outline';
+import { BrainCircuitIcon } from 'lucide-react';
+import ContactCTA from '@/components/ContactCTA';
+import Link from 'next/link';
 
 const values = [
   {
@@ -108,21 +108,21 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
-              <div className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-2">
                 <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
                   <BrainCircuitIcon className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold gradient-text">HeadKey</span>
-              </div>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <a href="/" className="btn-ghost">
+              <Link href="/" className="btn-ghost">
                 ← Back to Home
-              </a>
-              <a href="/contact" className="btn-ghost">
+              </Link>
+              <Link href="/contact" className="btn-ghost">
                 Contact
-              </a>
-              <button className="btn-primary">Get Started</button>
+              </Link>
+              <Link href="/contact" className="btn-primary">Get Started</Link>
             </div>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function AboutPage() {
             <span className="block gradient-text">AI Memory Management</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 text-balance leading-relaxed">
-            At HeadKey, we're building the next generation of memory systems
+            At HeadKey, we&apos;re building the next generation of memory systems
             that enable AI agents to think, learn, and remember with
             unprecedented intelligence and efficiency.
           </p>
@@ -158,7 +158,7 @@ export default function AboutPage() {
                 infrastructure for AI applications worldwide.
               </p>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Through our revolutionary CIBFE architecture, we're enabling AI
+                Through our revolutionary CIBFE architecture, we&apos;re enabling AI
                 agents to not just store information, but to truly understand,
                 contextualize, and intelligently manage their knowledge over
                 time.
@@ -264,7 +264,7 @@ export default function AboutPage() {
               Our Journey
             </h2>
             <p className="text-xl text-gray-600">
-              Key milestones in HeadKey's mission to transform AI memory
+              Key milestones in HeadKey&apos;s mission to transform AI memory
               management.
             </p>
           </div>
@@ -299,7 +299,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-4xl container-padding">
           <ContactCTA
             title="Join Our Mission"
-            description="We're always looking for talented individuals who share our passion for advancing AI technology. Get in touch to explore opportunities or learn more about HeadKey."
+            description="We&apos;re always looking for talented individuals who share our passion for advancing AI technology. Get in touch to explore opportunities or learn more about HeadKey."
           />
         </div>
       </section>

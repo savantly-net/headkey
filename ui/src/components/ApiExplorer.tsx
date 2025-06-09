@@ -6,9 +6,7 @@ import {
   ClipboardDocumentIcon, 
   CheckIcon,
   CommandLineIcon,
-  ServerIcon,
-  DocumentTextIcon,
-  CogIcon
+  ServerIcon
 } from '@heroicons/react/24/outline';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import ContactCTA from '@/components/ContactCTA';
@@ -191,7 +189,7 @@ export default function ApiExplorer() {
     }
   };
 
-  const generateCurl = (endpoint: any) => {
+  const generateCurl = (endpoint: typeof apiEndpoints[0]) => {
     let curl = `curl -X ${endpoint.method} \\\n  "${window.location.origin}${endpoint.path}"`;
     
     if (endpoint.method !== 'GET') {

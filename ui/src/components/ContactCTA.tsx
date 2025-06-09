@@ -5,6 +5,7 @@ import {
   ArrowRightIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
 interface ContactCTAProps {
   title?: string;
@@ -33,12 +34,12 @@ export default function ContactCTA({
           </div>
         </div>
         <div className="flex space-x-3">
-          <a href="/contact" className="btn-secondary">
+          <Link href="/contact" className="btn-secondary">
             Contact Us
-          </a>
-          <button className="btn-primary">
+          </Link>
+          <Link href="/contact" className="btn-primary">
             Join Beta
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -50,14 +51,14 @@ export default function ContactCTA({
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600 mb-4 text-sm">{description}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <a href="/contact" className="btn-secondary">
+          <Link href="/contact" className="btn-secondary">
             <EnvelopeIcon className="w-4 h-4 mr-2" />
             Contact Us
-          </a>
-          <button className="btn-primary">
+          </Link>
+          <Link href="/contact" className="btn-primary">
             Join Beta Program
             <ArrowRightIcon className="w-4 h-4 ml-2" />
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -76,14 +77,14 @@ export default function ContactCTA({
       <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">{description}</p>
       
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/contact" className="btn-secondary text-lg px-6 py-3">
+        <Link href="/contact" className="btn-secondary text-lg px-6 py-3">
           <EnvelopeIcon className="w-5 h-5 mr-2" />
           Contact Our Team
-        </a>
-        <button className="btn-primary text-lg px-6 py-3 group">
+        </Link>
+        <Link href="/contact" className="btn-primary text-lg px-6 py-3 group">
           Join Beta Program
           <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-        </button>
+        </Link>
       </div>
       
       <div className="mt-6 text-sm text-gray-500">

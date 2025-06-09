@@ -45,8 +45,8 @@ export default function NotFound() {
           {/* Description */}
           <div className="mb-8">
             <p className="text-lg text-gray-600 mb-6">
-              Oops! The page you're looking for seems to have been forgotten by
-              our memory system. Don't worry, our CIBFE architecture is working
+              Oops! The page you&apos;re looking for seems to have been forgotten by
+              our memory system. Don&apos;t worry, our CIBFE architecture is working
               to retrieve it.
             </p>
 
