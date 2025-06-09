@@ -1,17 +1,25 @@
 package ai.headkey.memory.implementations;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
 import ai.headkey.memory.interfaces.MemoryEncodingSystem;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * In-memory implementation of the Memory Encoding System (MES).
@@ -53,14 +61,13 @@ public class InMemoryMemoryEncodingSystem implements MemoryEncodingSystem {
     }
     
     @Override
-    public MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta) {
+    public MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta, String agentId) {
         if (content == null || content.trim().isEmpty()) {
             throw new IllegalArgumentException("Content cannot be null or empty");
         }
         if (meta == null) {
             throw new IllegalArgumentException("Metadata cannot be null");
         }
-        String agentId = (String) meta.getProperty("agentId");
         if (agentId == null || agentId.trim().isEmpty()) {
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
@@ -231,7 +238,7 @@ public class InMemoryMemoryEncodingSystem implements MemoryEncodingSystem {
     }
     
     @Override
-    public List<MemoryRecord> searchSimilar(String queryContent, int limit) {
+    public List<MemoryRecord> searchSimilar(String queryContent, int limit, String agentId) {
         if (queryContent == null || queryContent.trim().isEmpty()) {
             throw new IllegalArgumentException("Query content cannot be null or empty");
         }

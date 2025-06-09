@@ -1,46 +1,47 @@
 package ai.headkey.memory.langchain4j;
 
-import ai.headkey.memory.dto.CategoryLabel;
-import ai.headkey.memory.dto.Metadata;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.dto.Metadata;
+import dev.langchain4j.model.chat.ChatModel;
 
 /**
  * Unit tests for LangChain4JContextualCategorizationEngine.
  * 
- * These tests use mocked ChatLanguageModel to verify the engine's behavior
+ * These tests use mocked ChatModel to verify the engine's behavior
  * without requiring actual AI service calls.
  */
 @ExtendWith(MockitoExtension.class)
 class LangChain4JContextualCategorizationEngineTest {
     
     @Mock
-    private ChatLanguageModel mockChatModel;
+    private ChatModel mockChatModel;
     
     private LangChain4JContextualCategorizationEngine engine;
     
     @BeforeEach
     void setUp() {
-        // Mock the chat model to return predictable responses
-        when(mockChatModel.generate(any())).thenReturn("""
-            {
-              "primary": "UserProfile",
-              "secondary": "Preferences", 
-              "confidence": 0.85,
-              "reasoning": "Content describes user preferences"
-            }
-            """);
-        
+        // Create engine with mock ChatModel (no stubbing needed for most tests)
         engine = new LangChain4JContextualCategorizationEngine(mockChatModel);
     }
     
@@ -200,9 +201,10 @@ class LangChain4JContextualCategorizationEngineTest {
         
         assertNotNull(subcategories);
         assertFalse(subcategories.isEmpty());
-        assertTrue(subcategories.contains("Biography"));
+        assertTrue(subcategories.contains("Demographics"));
         assertTrue(subcategories.contains("Preferences"));
         assertTrue(subcategories.contains("Skills"));
+        assertTrue(subcategories.contains("Interests"));
     }
     
     @Test
@@ -235,7 +237,7 @@ class LangChain4JContextualCategorizationEngineTest {
         assertTrue(stats.containsKey("uptimeSeconds"));
         assertTrue(stats.containsKey("confidenceThreshold"));
         assertTrue(stats.containsKey("categoryDistribution"));
-        assertTrue(stats.containsKey("model"));
+        assertTrue(stats.containsKey("services"));
         
         // Verify counts
         assertTrue((Long) stats.get("totalCategorizations") >= 2);
@@ -279,12 +281,7 @@ class LangChain4JContextualCategorizationEngineTest {
         assertEquals(customSubcategories, engine.getSubcategories(customCategory));
     }
     
-    @Test
-    void testGetChatModel() {
-        ChatLanguageModel model = engine.getChatModel();
-        assertNotNull(model);
-        assertEquals(mockChatModel, model);
-    }
+
     
     @Test
     void testPatternBasedTagExtraction() {
@@ -309,8 +306,8 @@ class LangChain4JContextualCategorizationEngineTest {
     @Test
     void testFallbackBehaviorOnAIServiceFailure() {
         // Create engine with failing chat model
-        ChatLanguageModel failingModel = mock(ChatLanguageModel.class);
-        when(failingModel.generate(any())).thenThrow(new RuntimeException("AI service unavailable"));
+        ChatModel failingModel = mock(ChatModel.class);
+        when(failingModel.chat(anyString())).thenThrow(new RuntimeException("AI service unavailable"));
         
         LangChain4JContextualCategorizationEngine failingEngine = 
             new LangChain4JContextualCategorizationEngine(failingModel);
@@ -326,7 +323,7 @@ class LangChain4JContextualCategorizationEngineTest {
     @Test
     void testHealthCheckWithWorkingModel() {
         // Setup successful health check response
-        when(mockChatModel.generate(any())).thenReturn("""
+        when(mockChatModel.chat(anyString())).thenReturn("""
             {
               "primary": "UserProfile",
               "secondary": null,
@@ -342,8 +339,8 @@ class LangChain4JContextualCategorizationEngineTest {
     
     @Test
     void testHealthCheckWithFailingModel() {
-        ChatLanguageModel failingModel = mock(ChatLanguageModel.class);
-        when(failingModel.generate(any())).thenThrow(new RuntimeException("Service down"));
+        ChatModel failingModel = mock(ChatModel.class);
+        when(failingModel.chat(anyString())).thenThrow(new RuntimeException("Service down"));
         
         LangChain4JContextualCategorizationEngine failingEngine = 
             new LangChain4JContextualCategorizationEngine(failingModel);

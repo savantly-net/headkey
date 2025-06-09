@@ -1,17 +1,25 @@
 package ai.headkey.memory.langchain4j;
 
-import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
+import dev.langchain4j.model.chat.ChatModel;
 
 /**
  * Unit tests for LangChain4JComponentFactory.
@@ -23,12 +31,10 @@ import static org.mockito.Mockito.when;
 class LangChain4JComponentFactoryTest {
     
     @Mock
-    private ChatLanguageModel mockChatModel;
+    private ChatModel mockChatModel;
     
     @Test
     void testCreateCategorizationEngineWithChatModel() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         ContextualCategorizationEngine engine = 
             LangChain4JComponentFactory.createCategorizationEngine(mockChatModel);
         
@@ -53,8 +59,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testBuilderWithChatModel() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         ContextualCategorizationEngine engine = LangChain4JComponentFactory.builder()
                 .withChatModel(mockChatModel)
                 .withConfidenceThreshold(0.8)
@@ -66,8 +70,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testBuilderWithCustomCategories() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         Set<String> customCategories = Set.of("CustomCategory1", "CustomCategory2");
         
         ContextualCategorizationEngine engine = LangChain4JComponentFactory.builder()
@@ -175,7 +177,9 @@ class LangChain4JComponentFactoryTest {
         assertThrows(UnsupportedOperationException.class, () -> {
             // Use reflection to try to create an instance
             try {
-                LangChain4JComponentFactory.class.getDeclaredConstructor().newInstance();
+                var constructor = LangChain4JComponentFactory.class.getDeclaredConstructor();
+                constructor.setAccessible(true);
+                constructor.newInstance();
             } catch (Exception e) {
                 if (e.getCause() instanceof UnsupportedOperationException) {
                     throw (UnsupportedOperationException) e.getCause();
@@ -187,8 +191,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testBuilderFluentInterface() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         // Test that the builder methods return the builder instance for chaining
         LangChain4JComponentFactory.CategorizationEngineBuilder builder = 
             LangChain4JComponentFactory.builder();
@@ -207,8 +209,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testBuilderReset() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         // Test that multiple builds from same builder work
         LangChain4JComponentFactory.CategorizationEngineBuilder builder = 
             LangChain4JComponentFactory.builder()
@@ -224,8 +224,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testDefaultValues() {
-        when(mockChatModel.generate(any())).thenReturn("mock response");
-        
         ContextualCategorizationEngine engine = LangChain4JComponentFactory.builder()
                 .withChatModel(mockChatModel)
                 .build();
@@ -241,15 +239,6 @@ class LangChain4JComponentFactoryTest {
     
     @Test
     void testEngineHealthAfterFactoryCreation() {
-        when(mockChatModel.generate(any())).thenReturn("""
-            {
-              "primary": "UserProfile",
-              "secondary": null,
-              "confidence": 0.9,
-              "reasoning": "Test response"
-            }
-            """);
-        
         ContextualCategorizationEngine engine = 
             LangChain4JComponentFactory.createCategorizationEngine(mockChatModel);
         

@@ -74,12 +74,12 @@ public class BeliefAnalyzerExample {
         BeliefUpdateResult result = analyzer.analyzeNewMemory(memory);
         
         System.out.println("Memory analyzed: " + memory.getContent());
-        System.out.println("Beliefs created: " + result.getCreatedBeliefs().size());
+        System.out.println("Beliefs created: " + result.getNewBeliefs().size());
         System.out.println("Beliefs reinforced: " + result.getReinforcedBeliefs().size());
-        System.out.println("Conflicts detected: " + result.getDetectedConflicts().size());
+        System.out.println("Conflicts detected: " + result.getConflicts().size());
         
         // Show created beliefs
-        for (Belief belief : result.getCreatedBeliefs()) {
+        for (Belief belief : result.getNewBeliefs()) {
             System.out.println("  - " + belief.getStatement() + " (confidence: " + 
                              String.format("%.2f", belief.getConfidence()) + ")");
         }
@@ -115,7 +115,7 @@ public class BeliefAnalyzerExample {
             BeliefUpdateResult result = analyzer.analyzeNewMemory(memory);
             
             System.out.println("Processed: " + content);
-            for (Belief belief : result.getCreatedBeliefs()) {
+            for (Belief belief : result.getNewBeliefs()) {
                 System.out.println("  → " + belief.getStatement());
             }
         }
@@ -195,12 +195,12 @@ public class BeliefAnalyzerExample {
         System.out.println("Analyzed conflicting preferences:");
         System.out.println("  Memory 1: " + memory1.getContent());
         System.out.println("  Memory 2: " + memory2.getContent());
-        System.out.println("  Conflicts detected: " + result2.getDetectedConflicts().size());
+        System.out.println("  Conflicts detected: " + result2.getConflicts().size());
         
         // Show unresolved conflicts
         List<BeliefConflict> conflicts = analyzer.getUnresolvedConflicts("user-789");
         for (BeliefConflict conflict : conflicts) {
-            System.out.println("  Conflict: " + conflict.getId() + " - " + conflict.getResolutionStrategy());
+            System.out.println("  Conflict: " + conflict.getConflictId() + " - " + conflict.getResolution());
         }
         
         // Get service information

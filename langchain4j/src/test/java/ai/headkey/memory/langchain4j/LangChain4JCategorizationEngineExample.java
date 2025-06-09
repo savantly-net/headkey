@@ -1,11 +1,16 @@
 package ai.headkey.memory.langchain4j;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.Metadata;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-
-import java.util.*;
 
 /**
  * Example demonstrating usage of LangChain4JContextualCategorizationEngine.
@@ -43,7 +48,7 @@ public class LangChain4JCategorizationEngineExample {
         
         try {
             // Create OpenAI chat model
-            ChatLanguageModel chatModel = OpenAiChatModel.builder()
+            ChatModel chatModel = OpenAiChatModel.builder()
                     .apiKey(System.getenv("OPENAI_API_KEY"))
                     .modelName("gpt-3.5-turbo")
                     .temperature(0.3)
@@ -69,7 +74,7 @@ public class LangChain4JCategorizationEngineExample {
         System.out.println("\n=== Custom Configuration Example ===");
         
         // Create a mock chat model for demonstration
-        ChatLanguageModel mockModel = createMockChatModel();
+        ChatModel mockModel = createMockChatModel();
         
         LangChain4JContextualCategorizationEngine engine = 
             new LangChain4JContextualCategorizationEngine(mockModel);
@@ -101,7 +106,7 @@ public class LangChain4JCategorizationEngineExample {
     public static void exampleBatchProcessing() {
         System.out.println("\n=== Batch Processing Example ===");
         
-        ChatLanguageModel mockModel = createMockChatModel();
+        ChatModel mockModel = createMockChatModel();
         LangChain4JContextualCategorizationEngine engine = 
             new LangChain4JContextualCategorizationEngine(mockModel);
         
@@ -115,8 +120,8 @@ public class LangChain4JCategorizationEngineExample {
         
         // Create common metadata
         Metadata commonMeta = new Metadata();
-        commonMeta.put("source", "user_survey");
-        commonMeta.put("timestamp", System.currentTimeMillis());
+        commonMeta.setProperty("source", "user_survey");
+        commonMeta.setProperty("timestamp", System.currentTimeMillis());
         
         // Process batch
         long startTime = System.currentTimeMillis();
@@ -140,7 +145,7 @@ public class LangChain4JCategorizationEngineExample {
     public static void exampleStatisticsAndMonitoring() {
         System.out.println("\n=== Statistics and Monitoring Example ===");
         
-        ChatLanguageModel mockModel = createMockChatModel();
+        ChatModel mockModel = createMockChatModel();
         LangChain4JContextualCategorizationEngine engine = 
             new LangChain4JContextualCategorizationEngine(mockModel);
         
@@ -245,10 +250,10 @@ public class LangChain4JCategorizationEngineExample {
      * Creates a mock chat model for demonstration purposes.
      * In real usage, you would use actual LangChain4j models.
      */
-    private static ChatLanguageModel createMockChatModel() {
-        return new ChatLanguageModel() {
+    private static ChatModel createMockChatModel() {
+        return new ChatModel() {
             @Override
-            public String generate(String userMessage) {
+            public String chat(String userMessage) {
                 // Simple mock responses based on content keywords
                 if (userMessage.toLowerCase().contains("project") || 
                     userMessage.toLowerCase().contains("timeline")) {
@@ -281,6 +286,12 @@ public class LangChain4JCategorizationEngineExample {
                         """;
                 }
             }
+
+            @Override
+            public ChatResponse chat(List<ChatMessage> messages) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'generate'");
+            }
         };
     }
     
@@ -303,7 +314,7 @@ public class LangChain4JCategorizationEngineExample {
         // OpenAI example
         System.out.println("\n// OpenAI Configuration:");
         System.out.println("""
-            ChatLanguageModel openAiModel = OpenAiChatModel.builder()
+            ChatModel openAiModel = OpenAiChatModel.builder()
                 .apiKey(System.getenv("OPENAI_API_KEY"))
                 .modelName("gpt-4")
                 .temperature(0.2)
@@ -314,7 +325,7 @@ public class LangChain4JCategorizationEngineExample {
         // Azure OpenAI example
         System.out.println("// Azure OpenAI Configuration:");
         System.out.println("""
-            ChatLanguageModel azureModel = AzureOpenAiChatModel.builder()
+            ChatModel azureModel = AzureOpenAiChatModel.builder()
                 .apiKey(System.getenv("AZURE_OPENAI_KEY"))
                 .endpoint(System.getenv("AZURE_OPENAI_ENDPOINT"))
                 .deploymentName("gpt-35-turbo")

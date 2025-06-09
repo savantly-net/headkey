@@ -1,20 +1,33 @@
 package ai.headkey.persistence.services;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
-import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
+import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
-import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.Query;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 
 /**
  * Jakarta Persistence (JPA) implementation of the MemoryEncodingSystem.
@@ -139,7 +152,7 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
     
     @Override
     protected MemoryRecord doEncodeAndStore(String content, CategoryLabel category, 
-                                          Metadata meta, double[] embedding) {
+                                          Metadata meta, String agentId, double[] embedding) {
         EntityManager em = null;
         EntityTransaction transaction = null;
         MemoryEntity entity = null;
@@ -164,7 +177,6 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
             // Create new memory entity
             entity = new MemoryEntity();
             String memoryId = generateMemoryId();
-            String agentId = getAgentIdFromMetadata(meta);
             
             entity.setId(memoryId);
             entity.setAgentId(agentId);
@@ -316,7 +328,7 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
                 transaction.rollback();
             }
             if (e instanceof MemoryNotFoundException) {
-                throw new StorageException("Memory not found: " + memoryRecord.getId(), e);
+                throw e;
             }
             throw new StorageException("Failed to update memory: " + memoryRecord.getId(), e);
         } finally {
@@ -402,12 +414,12 @@ public class JpaMemoryEncodingSystem extends AbstractMemoryEncodingSystem {
     }
     
     @Override
-    protected List<MemoryRecord> doSearchSimilar(String queryContent, double[] queryEmbedding, int limit) {
+    protected List<MemoryRecord> doSearchSimilar(String queryContent, double[] queryEmbedding, int limit, String agentId) {
         EntityManager em = entityManagerFactory.createEntityManager();
         
         try {
             return similaritySearchStrategy.searchSimilar(
-                em, queryContent, queryEmbedding, null, limit, 
+                em, queryContent, queryEmbedding, agentId, limit, 
                 maxSimilaritySearchResults, similarityThreshold);
         } catch (Exception e) {
             throw new StorageException("Failed to search similar memories", e);

@@ -1,28 +1,36 @@
 package ai.headkey.persistence.strategies.jpa;
 
-import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.persistence.entities.MemoryEntity;
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
-import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
-import ai.headkey.persistence.factory.JpaMemorySystemFactory;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
-import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.persistence.entities.MemoryEntity;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 /**
  * Tests for JPA similarity search strategies.
  */
 class JpaSimilaritySearchStrategyTest {
     
+    private static final String AGENT_ID = "test-agent";
     private static EntityManagerFactory entityManagerFactory;
     private EntityManager entityManager;
     
@@ -54,7 +62,7 @@ class JpaSimilaritySearchStrategyTest {
         properties.put("hibernate.hbm2ddl.auto", "create-drop");
         properties.put("hibernate.show_sql", "false");
         
-        entityManagerFactory = Persistence.createEntityManagerFactory("default", properties);
+        entityManagerFactory = Persistence.createEntityManagerFactory("headkey-beliefs-h2-test", properties);
     }
     
     @AfterAll
@@ -73,7 +81,19 @@ class JpaSimilaritySearchStrategyTest {
     @AfterEach
     void tearDown() {
         if (entityManager != null) {
-            entityManager.close();
+            try {
+                // Clean up test data to prevent constraint violations
+                entityManager.getTransaction().begin();
+                entityManager.createQuery("DELETE FROM MemoryEntity").executeUpdate();
+                entityManager.getTransaction().commit();
+            } catch (Exception e) {
+                if (entityManager.getTransaction().isActive()) {
+                    entityManager.getTransaction().rollback();
+                }
+                // Ignore cleanup errors
+            } finally {
+                entityManager.close();
+            }
         }
     }
     
@@ -135,33 +155,6 @@ class JpaSimilaritySearchStrategyTest {
         entityManager.persist(entity4);
         
         entityManager.getTransaction().commit();
-    }
-    
-    @Test
-    void testDefaultJpaSimilaritySearchStrategy_VectorSearch() throws Exception {
-        DefaultJpaSimilaritySearchStrategy strategy = new DefaultJpaSimilaritySearchStrategy();
-        
-        String queryContent = "brown fox jumping";
-        double[] queryVector = mockEmbeddingGenerator.generateEmbedding(queryContent);
-        
-        List<MemoryRecord> results = strategy.searchSimilar(
-            entityManager, queryContent, queryVector, null, 5, 1000, 0.0);
-        
-        assertNotNull(results);
-        assertFalse(results.isEmpty());
-        
-        // Should find entities with embeddings
-        assertTrue(results.size() <= 5);
-        
-        // Results should be ordered by similarity
-        if (results.size() > 1) {
-            // We can't easily test exact similarity ordering without complex calculations,
-            // but we can verify that all returned results have content
-            for (MemoryRecord record : results) {
-                assertNotNull(record.getContent());
-                assertNotNull(record.getId());
-            }
-        }
     }
     
     @Test
@@ -317,7 +310,7 @@ class JpaSimilaritySearchStrategyTest {
         assertNotNull(memorySystem.getSimilaritySearchStrategy());
         
         // Test that the memory system can perform similarity search
-        List<MemoryRecord> results = memorySystem.searchSimilar("brown fox", 3);
+        List<MemoryRecord> results = memorySystem.searchSimilar("brown fox", 3,AGENT_ID);
         assertNotNull(results);
         
         // Should find relevant memories

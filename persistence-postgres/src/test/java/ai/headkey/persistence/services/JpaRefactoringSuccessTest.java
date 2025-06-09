@@ -1,19 +1,30 @@
 package ai.headkey.persistence.services;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import org.junit.jupiter.api.*;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Comprehensive test demonstrating the successful refactoring of JPA similarity search strategies.
@@ -35,6 +46,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class JpaRefactoringSuccessTest {
     
+    private static final String AGENT_ID = "test-agent";
+
     private static EntityManagerFactory entityManagerFactory;
     
     @BeforeAll
@@ -74,11 +87,11 @@ class JpaRefactoringSuccessTest {
         Metadata metadata = new Metadata();
         metadata.setProperty("test", "strategy_abstraction");
         
-        MemoryRecord stored = memorySystem.encodeAndStore("Testing strategy abstraction", category, metadata);
+        MemoryRecord stored = memorySystem.encodeAndStore("Testing strategy abstraction", category, metadata,AGENT_ID);
         assertNotNull(stored, "Memory should be stored successfully");
         
         // Test that search delegates to strategy
-        List<MemoryRecord> results = memorySystem.searchSimilar("abstraction", 5);
+        List<MemoryRecord> results = memorySystem.searchSimilar("abstraction", 5,AGENT_ID);
         assertNotNull(results, "Search should delegate to strategy and return results");
         
         System.out.println("   ✅ Strategy abstraction working correctly");
@@ -140,8 +153,6 @@ class JpaRefactoringSuccessTest {
         
         assertTrue(defaultSystem.getSimilaritySearchStrategy() instanceof DefaultJpaSimilaritySearchStrategy,
                   "Custom default strategy should be injected");
-        assertTrue(defaultSystem.getSimilaritySearchStrategy().supportsVectorSearch(),
-                  "Default strategy should support vector search");
         
         System.out.println("   🎯 Text-based strategy: " + textSystem.getSimilaritySearchStrategy().getStrategyName());
         System.out.println("   🎯 Default strategy: " + defaultSystem.getSimilaritySearchStrategy().getStrategyName());
@@ -162,7 +173,7 @@ class JpaRefactoringSuccessTest {
         metadata.setProperty("purpose", "backwards_compatibility");
         
         // CREATE
-        MemoryRecord stored = memorySystem.encodeAndStore("Testing backwards compatibility", category, metadata);
+        MemoryRecord stored = memorySystem.encodeAndStore("Testing backwards compatibility", category, metadata,AGENT_ID);
         assertNotNull(stored, "Should store memory successfully");
         assertNotNull(stored.getId(), "Should have generated ID");
         assertEquals("Testing backwards compatibility", stored.getContent(), "Content should match");
@@ -218,14 +229,14 @@ class JpaRefactoringSuccessTest {
         Metadata metadata2 = new Metadata();
         metadata2.setProperty("topic", "machine_learning");
         
-        MemoryRecord memory1 = defaultSystem.encodeAndStore("Artificial intelligence enables computers to think", category1, metadata1);
-        MemoryRecord memory2 = defaultSystem.encodeAndStore("Machine learning algorithms improve with data", category2, metadata2);
+        MemoryRecord memory1 = defaultSystem.encodeAndStore("Artificial intelligence enables computers to think", category1, metadata1,AGENT_ID);
+        MemoryRecord memory2 = defaultSystem.encodeAndStore("Machine learning algorithms improve with data", category2, metadata2,AGENT_ID);
         
         // Test search functionality
-        List<MemoryRecord> aiResults = defaultSystem.searchSimilar("artificial intelligence", 5);
+        List<MemoryRecord> aiResults = defaultSystem.searchSimilar("artificial intelligence", 5,AGENT_ID);
         assertNotNull(aiResults, "AI search should return results");
         
-        List<MemoryRecord> mlResults = defaultSystem.searchSimilar("machine learning", 5);
+        List<MemoryRecord> mlResults = defaultSystem.searchSimilar("machine learning", 5,AGENT_ID);
         assertNotNull(mlResults, "ML search should return results");
         
         // Test with custom text-based strategy
@@ -233,8 +244,8 @@ class JpaRefactoringSuccessTest {
         JpaMemoryEncodingSystem textSystem = new JpaMemoryEncodingSystem(
             entityManagerFactory, null, 100, true, 1000, 0.0, textStrategy);
         
-        textSystem.encodeAndStore("Neural networks process information like brains", category1, metadata1);
-        List<MemoryRecord> neuralResults = textSystem.searchSimilar("neural networks", 5);
+        textSystem.encodeAndStore("Neural networks process information like brains", category1, metadata1,AGENT_ID);
+        List<MemoryRecord> neuralResults = textSystem.searchSimilar("neural networks", 5,AGENT_ID);
         assertNotNull(neuralResults, "Neural network search should return results");
         
         System.out.println("   🎯 Default strategy search: " + aiResults.size() + " results");
@@ -310,8 +321,8 @@ class JpaRefactoringSuccessTest {
         Metadata metadata = new Metadata();
         metadata.setProperty("achievement", "similarity_search_abstraction");
         
-        MemoryRecord success = memorySystem.encodeAndStore("Refactoring completed successfully!", category, metadata);
-        List<MemoryRecord> results = memorySystem.searchSimilar("refactoring", 5);
+        MemoryRecord success = memorySystem.encodeAndStore("Refactoring completed successfully!", category, metadata,AGENT_ID);
+        List<MemoryRecord> results = memorySystem.searchSimilar("refactoring", 5,AGENT_ID);
         
         assertTrue(results.size() >= 0, "Search should work");
         

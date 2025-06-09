@@ -1,22 +1,27 @@
 package ai.headkey.memory.implementations;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import ai.headkey.memory.dto.BeliefUpdateResult;
+import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.IngestionResult;
 import ai.headkey.memory.dto.MemoryInput;
 import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.dto.CategoryLabel;
-import ai.headkey.memory.dto.BeliefUpdateResult;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.enums.Status;
 import ai.headkey.memory.exceptions.InvalidInputException;
-import ai.headkey.memory.interfaces.InformationIngestionModule;
-import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
-import ai.headkey.memory.interfaces.MemoryEncodingSystem;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
+import ai.headkey.memory.interfaces.InformationIngestionModule;
+import ai.headkey.memory.interfaces.MemoryEncodingSystem;
 
 /**
  * General implementation of the Information Ingestion Module (IIM).
@@ -133,7 +138,8 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
             MemoryRecord memoryRecord = encodingSystem.encodeAndStore(
                 input.getContent(), 
                 category, 
-                metadata
+                metadata,
+                input.getAgentId()
             );
             
             // Step 4: Analyze beliefs

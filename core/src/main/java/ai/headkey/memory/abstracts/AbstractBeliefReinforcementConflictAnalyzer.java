@@ -2,12 +2,14 @@ package ai.headkey.memory.abstracts;
 
 import ai.headkey.memory.dto.*;
 import ai.headkey.memory.enums.ConflictResolution;
+import ai.headkey.memory.exceptions.StorageException;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
 import ai.headkey.memory.spi.BeliefExtractionService;
 import ai.headkey.memory.spi.BeliefStorageService;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -156,7 +158,7 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
             BeliefConflict resolvedConflict = applyResolutionStrategy(conflict, strategy);
             
             if (resolvedConflict.isResolved()) {
-                storageService.removeConflict(conflict.getId());
+                storageService.removeConflict(conflict.getConflictId());
                 totalConflictsResolved++;
             } else {
                 storageService.storeConflict(resolvedConflict);
@@ -188,10 +190,8 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
             belief.setLastUpdated(Instant.now());
             
             return storageService.storeBelief(belief);
-        } catch (BeliefNotFoundException e) {
-            throw e;
         } catch (Exception e) {
-            throw new BeliefAnalysisException("Failed to update belief confidence: " + e.getMessage(), e);
+            throw new StorageException("Failed to update belief confidence: " + e.getMessage(), e);
         }
     }
 
@@ -211,10 +211,8 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
             belief.deactivate();
             
             return storageService.storeBelief(belief);
-        } catch (BeliefNotFoundException e) {
-            throw e;
         } catch (Exception e) {
-            throw new BeliefAnalysisException("Failed to deactivate belief: " + e.getMessage(), e);
+            throw new StorageException("Failed to deactivate belief: " + e.getMessage(), e);
         }
     }
 
@@ -357,7 +355,7 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
         newBelief.addEvidence(memory.getId());
 
         Belief storedBelief = storageService.storeBelief(newBelief);
-        result.getCreatedBeliefs().add(storedBelief);
+        result.addNewBelief(storedBelief);
         totalBeliefsCreated++;
     }
 
@@ -365,22 +363,22 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
         belief.reinforce(0.1); // Standard reinforcement boost
         belief.addEvidence(memory.getId());
         Belief storedBelief = storageService.storeBelief(belief);
-        result.getReinforcedBeliefs().add(storedBelief);
+        result.addReinforcedBelief(storedBelief);
         totalBeliefsReinforced++;
     }
 
     protected final void detectConflict(Belief existingBelief, BeliefExtractionService.ExtractedBelief extracted, MemoryRecord memory, BeliefUpdateResult result) {
         String conflictId = generateConflictId();
         BeliefConflict conflict = new BeliefConflict();
-        conflict.setId(conflictId);
+        conflict.setConflictId(conflictId);
         conflict.setAgentId(extracted.getAgentId());
-        conflict.setConflictingBeliefIds(Arrays.asList(existingBelief.getId()));
-        conflict.setNewEvidenceMemoryId(memory.getId());
+        conflict.setBeliefId(existingBelief.getId());
+        conflict.setMemoryId(memory.getId());
         conflict.setDetectedAt(Instant.now());
         conflict.setResolved(false);
 
         storageService.storeConflict(conflict);
-        result.getDetectedConflicts().add(conflict);
+        result.addConflict(conflict);
         totalConflictsDetected++;
     }
 
@@ -414,9 +412,10 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
     protected final BeliefConflict createConflictBetweenBeliefs(Belief belief1, Belief belief2) {
         String conflictId = generateConflictId();
         BeliefConflict conflict = new BeliefConflict();
-        conflict.setId(conflictId);
+        conflict.setConflictId(conflictId);
         conflict.setAgentId(belief1.getAgentId());
-        conflict.setConflictingBeliefIds(Arrays.asList(belief1.getId(), belief2.getId()));
+        conflict.setBeliefId(belief1.getId());
+        conflict.setConflictingBeliefId(belief2.getId());
         conflict.setDetectedAt(Instant.now());
         conflict.setResolved(false);
         return conflict;
@@ -424,17 +423,17 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
 
     protected final String determineConflictType(BeliefConflict conflict) {
         // Simple heuristic - in a more sophisticated implementation, this could use AI
-        List<String> beliefIds = conflict.getConflictingBeliefIds();
-        if (beliefIds.isEmpty()) {
+        String beliefId = conflict.getBeliefId();
+        String conflictingBeliefId = conflict.getConflictingBeliefId();
+        String memoryId = conflict.getMemoryId();
+        
+        if (beliefId != null && conflictingBeliefId != null) {
+            return "belief_belief";
+        } else if (beliefId != null && memoryId != null) {
+            return "belief_memory";
+        } else {
             return "unknown";
         }
-        
-        Optional<Belief> firstBeliefOpt = storageService.getBeliefById(beliefIds.get(0));
-        if (firstBeliefOpt.isPresent() && firstBeliefOpt.get().getCategory() != null) {
-            return firstBeliefOpt.get().getCategory();
-        }
-        
-        return "general";
     }
 
     protected final BeliefConflict applyResolutionStrategy(BeliefConflict conflict, String strategy) {
@@ -452,10 +451,11 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
     }
 
     protected final BeliefConflict resolveWithNewerWins(BeliefConflict conflict) {
-        List<String> beliefIds = conflict.getConflictingBeliefIds();
-        if (beliefIds.size() >= 2) {
-            Optional<Belief> belief1Opt = storageService.getBeliefById(beliefIds.get(0));
-            Optional<Belief> belief2Opt = storageService.getBeliefById(beliefIds.get(1));
+        String beliefId1 = conflict.getBeliefId();
+        String beliefId2 = conflict.getConflictingBeliefId();
+        if (beliefId1 != null && beliefId2 != null) {
+            Optional<Belief> belief1Opt = storageService.getBeliefById(beliefId1);
+            Optional<Belief> belief2Opt = storageService.getBeliefById(beliefId2);
             
             if (!belief1Opt.isPresent() || !belief2Opt.isPresent()) {
                 return conflict;
@@ -473,18 +473,19 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
                 
                 conflict.setResolved(true);
                 conflict.setResolvedAt(Instant.now());
-                conflict.setResolutionStrategy("newer_wins");
-                conflict.setResolutionNotes("Kept newer belief: " + newer.getId());
+                conflict.setResolution(ConflictResolution.ARCHIVE_OLD);
+                conflict.setResolutionDetails("Kept newer belief: " + newer.getId());
             }
         }
         return conflict;
     }
 
     protected final BeliefConflict resolveWithHigherConfidence(BeliefConflict conflict) {
-        List<String> beliefIds = conflict.getConflictingBeliefIds();
-        if (beliefIds.size() >= 2) {
-            Optional<Belief> belief1Opt = storageService.getBeliefById(beliefIds.get(0));
-            Optional<Belief> belief2Opt = storageService.getBeliefById(beliefIds.get(1));
+        String beliefId1 = conflict.getBeliefId();
+        String beliefId2 = conflict.getConflictingBeliefId();
+        if (beliefId1 != null && beliefId2 != null) {
+            Optional<Belief> belief1Opt = storageService.getBeliefById(beliefId1);
+            Optional<Belief> belief2Opt = storageService.getBeliefById(beliefId2);
             
             if (!belief1Opt.isPresent() || !belief2Opt.isPresent()) {
                 return conflict;
@@ -502,8 +503,8 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
                 
                 conflict.setResolved(true);
                 conflict.setResolvedAt(Instant.now());
-                conflict.setResolutionStrategy("higher_confidence");
-                conflict.setResolutionNotes("Kept higher confidence belief: " + higher.getId());
+                conflict.setResolution(ConflictResolution.KEEP_OLD);
+                conflict.setResolutionDetails("Kept higher confidence belief: " + higher.getId());
             }
         }
         return conflict;
@@ -517,15 +518,15 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
 
     protected final BeliefConflict flagForReview(BeliefConflict conflict) {
         conflict.setResolved(false);
-        conflict.setResolutionStrategy("manual_review_required");
-        conflict.setResolutionNotes("Conflict requires manual review");
+        conflict.setResolution(ConflictResolution.REQUIRE_MANUAL_REVIEW);
+        conflict.setResolutionDetails("Conflict requires manual review");
         return conflict;
     }
 
     protected final void mergeBeliefUpdateResults(BeliefUpdateResult target, BeliefUpdateResult source) {
-        target.getCreatedBeliefs().addAll(source.getCreatedBeliefs());
-        target.getReinforcedBeliefs().addAll(source.getReinforcedBeliefs());
-        target.getDetectedConflicts().addAll(source.getDetectedConflicts());
+        source.getNewBeliefs().forEach(target::addNewBelief);
+        source.getReinforcedBeliefs().forEach(target::addReinforcedBelief);
+        source.getConflicts().forEach(target::addConflict);
     }
 
     protected final double calculateBeliefRelevance(Belief belief, String queryContent) {

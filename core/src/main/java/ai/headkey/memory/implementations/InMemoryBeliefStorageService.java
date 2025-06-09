@@ -269,7 +269,7 @@ public class InMemoryBeliefStorageService implements BeliefStorageService {
         if (conflict == null) {
             throw new IllegalArgumentException("Conflict cannot be null");
         }
-        if (conflict.getId() == null || conflict.getId().trim().isEmpty()) {
+        if (conflict.getConflictId() == null || conflict.getConflictId().trim().isEmpty()) {
             throw new IllegalArgumentException("Conflict ID cannot be null or empty");
         }
 
@@ -278,12 +278,12 @@ public class InMemoryBeliefStorageService implements BeliefStorageService {
                 conflict.setDetectedAt(Instant.now());
             }
 
-            conflicts.put(conflict.getId(), conflict);
+            conflicts.put(conflict.getConflictId(), conflict);
             
             // Update conflict index
             if (conflict.getAgentId() != null) {
                 conflictsByAgent.computeIfAbsent(conflict.getAgentId(), k -> ConcurrentHashMap.newKeySet())
-                    .add(conflict.getId());
+                    .add(conflict.getConflictId());
             }
 
             totalStoreOperations++;

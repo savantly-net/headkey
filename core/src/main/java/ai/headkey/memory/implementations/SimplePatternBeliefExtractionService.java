@@ -198,7 +198,7 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
         
         // Consider source reliability if available in context
         if (context != null && context.getSourceMemory() != null) {
-            Object reliability = context.getSourceMemory().getMetadata().getAdditionalData().get("reliability");
+            Object reliability = context.getSourceMemory().getMetadata().getProperty("reliability");
             if (reliability instanceof Number) {
                 double reliabilityScore = ((Number) reliability).doubleValue();
                 baseConfidence = baseConfidence * reliabilityScore;

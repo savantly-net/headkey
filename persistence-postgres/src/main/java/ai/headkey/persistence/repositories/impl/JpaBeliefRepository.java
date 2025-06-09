@@ -4,10 +4,9 @@ import ai.headkey.persistence.entities.BeliefEntity;
 import ai.headkey.persistence.repositories.BeliefRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
-import jakarta.transaction.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,16 +27,15 @@ import java.util.stream.Collectors;
  * 
  * @since 1.0
  */
-@Transactional
 public class JpaBeliefRepository implements BeliefRepository {
 
-    private final EntityManager entityManager;
+    private final EntityManagerFactory entityManagerFactory;
 
     /**
-     * Constructor with EntityManager dependency.
+     * Constructor with EntityManagerFactory dependency.
      */
-    public JpaBeliefRepository(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public JpaBeliefRepository(EntityManagerFactory entityManagerFactory) {
+        this.entityManagerFactory = entityManagerFactory;
     }
 
     // ========== Basic CRUD Operations ==========
@@ -48,15 +46,27 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Belief entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
+            BeliefEntity result;
             if (belief.getId() != null && existsById(belief.getId())) {
-                return entityManager.merge(belief);
+                result = em.merge(belief);
             } else {
-                entityManager.persist(belief);
-                return belief;
+                em.persist(belief);
+                result = belief;
             }
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to save belief entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -66,38 +76,65 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Beliefs list cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         List<BeliefEntity> savedEntities = new ArrayList<>();
         
         try {
+            em.getTransaction().begin();
+            
             for (int i = 0; i < beliefs.size(); i++) {
-                BeliefEntity saved = save(beliefs.get(i));
+                BeliefEntity belief = beliefs.get(i);
+                
+                BeliefEntity saved;
+                if (belief.getId() != null && existsByIdInTransaction(belief.getId(), em)) {
+                    saved = em.merge(belief);
+                } else {
+                    em.persist(belief);
+                    saved = belief;
+                }
                 savedEntities.add(saved);
                 
                 // Flush periodically for large batches
                 if (i % 50 == 0) {
-                    entityManager.flush();
-                    entityManager.clear();
+                    em.flush();
+                    em.clear();
                 }
             }
             
-            entityManager.flush();
+            em.getTransaction().commit();
             return savedEntities;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to save belief entities: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public Optional<BeliefEntity> findById(String id) {
         if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID cannot be null or empty");
+            return Optional.empty();
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            BeliefEntity entity = entityManager.find(BeliefEntity.class, id);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.id = :id", 
+                BeliefEntity.class
+            );
+            query.setParameter("id", id);
+            BeliefEntity entity = query.getResultStream().findFirst().orElse(null);
             return Optional.ofNullable(entity);
         } catch (Exception e) {
             throw new RuntimeException("Failed to find belief by ID: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -111,15 +148,21 @@ public class JpaBeliefRepository implements BeliefRepository {
             return new ArrayList<>();
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createQuery(
-                "SELECT b FROM BeliefEntity b WHERE b.id IN :ids ORDER BY b.lastUpdated DESC",
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.id IN :ids ORDER BY b.lastUpdated DESC",
                 BeliefEntity.class
             );
             query.setParameter("ids", ids);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find beliefs by IDs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -129,15 +172,26 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            BeliefEntity entity = entityManager.find(BeliefEntity.class, id);
+            em.getTransaction().begin();
+            
+            BeliefEntity entity = em.find(BeliefEntity.class, id);
             if (entity != null) {
-                entityManager.remove(entity);
+                em.remove(entity);
+                em.getTransaction().commit();
                 return true;
             }
+            
+            em.getTransaction().commit();
             return false;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete belief by ID: " + e.getMessage(), e);
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new RuntimeException("Failed to delete belief: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -147,17 +201,27 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Belief entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            if (entityManager.contains(belief)) {
-                entityManager.remove(belief);
+            em.getTransaction().begin();
+            
+            if (em.contains(belief)) {
+                em.remove(belief);
             } else {
-                BeliefEntity managed = entityManager.find(BeliefEntity.class, belief.getId());
+                BeliefEntity managed = em.find(BeliefEntity.class, belief.getId());
                 if (managed != null) {
-                    entityManager.remove(managed);
+                    em.remove(managed);
                 }
             }
+            
+            em.getTransaction().commit();
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete belief entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -167,8 +231,9 @@ public class JpaBeliefRepository implements BeliefRepository {
             return false;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM BeliefEntity b WHERE b.id = :id",
                 Long.class
             );
@@ -176,6 +241,8 @@ public class JpaBeliefRepository implements BeliefRepository {
             return query.getSingleResult() > 0;
         } catch (Exception e) {
             return false;
+        } finally {
+            em.close();
         }
     }
 
@@ -187,13 +254,23 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createNamedQuery("BeliefEntity.findByAgent", BeliefEntity.class);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.agentId = :agentId AND (:includeInactive = true OR b.active = true) " +
+                "ORDER BY b.lastUpdated DESC",
+                BeliefEntity.class
+            );
             query.setParameter("agentId", agentId);
             query.setParameter("includeInactive", includeInactive);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find beliefs by agent: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -203,37 +280,64 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Category cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createNamedQuery("BeliefEntity.findByCategory", BeliefEntity.class);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.category = :category AND (:agentId IS NULL OR b.agentId = :agentId) " +
+                "AND (:includeInactive = true OR b.active = true) " +
+                "ORDER BY b.lastUpdated DESC",
+                BeliefEntity.class
+            );
             query.setParameter("category", category);
             query.setParameter("agentId", agentId);
             query.setParameter("includeInactive", includeInactive);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find beliefs by category: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<BeliefEntity> findAllActive() {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createNamedQuery("BeliefEntity.findAllActive", BeliefEntity.class);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.active = true " +
+                "ORDER BY b.lastUpdated DESC",
+                BeliefEntity.class
+            );
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find all active beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<BeliefEntity> findAll() {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createQuery(
-                "SELECT b FROM BeliefEntity b ORDER BY b.lastUpdated DESC",
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "ORDER BY b.lastUpdated DESC",
                 BeliefEntity.class
             );
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find all beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -243,13 +347,24 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Threshold must be between 0.0 and 1.0");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createNamedQuery("BeliefEntity.findLowConfidence", BeliefEntity.class);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE b.confidence < :threshold AND (:agentId IS NULL OR b.agentId = :agentId) " +
+                "AND b.active = true " +
+                "ORDER BY b.confidence ASC",
+                BeliefEntity.class
+            );
             query.setParameter("threshold", threshold);
             query.setParameter("agentId", agentId);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find low confidence beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -262,14 +377,26 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Limit must be at least 1");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefEntity> query = entityManager.createNamedQuery("BeliefEntity.searchByText", BeliefEntity.class);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
+                "AND (:agentId IS NULL OR b.agentId = :agentId) " +
+                "AND b.active = true " +
+                "ORDER BY b.confidence DESC",
+                BeliefEntity.class
+            );
             query.setParameter("searchText", searchText);
             query.setParameter("agentId", agentId);
             query.setMaxResults(limit);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to search beliefs by text: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -285,13 +412,29 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Limit must be at least 1");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             // For now, use simple text search as a fallback
             // In a real implementation, this would use vector similarity with embeddings
             String searchText = extractKeywordsFromStatement(statement);
-            return searchByText(searchText, agentId, limit);
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT DISTINCT b FROM BeliefEntity b " +
+                "LEFT JOIN FETCH b.evidenceMemoryIds " +
+                "LEFT JOIN FETCH b.tags " +
+                "WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
+                "AND (:agentId IS NULL OR b.agentId = :agentId) " +
+                "AND b.active = true " +
+                "ORDER BY b.confidence DESC",
+                BeliefEntity.class
+            );
+            query.setParameter("searchText", searchText);
+            query.setParameter("agentId", agentId);
+            query.setMaxResults(limit);
+            return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find similar beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -303,51 +446,77 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createNamedQuery("BeliefEntity.countByAgent", Long.class);
+            TypedQuery<Long> query = em.createNamedQuery("BeliefEntity.countByAgent", Long.class);
             query.setParameter("agentId", agentId);
             query.setParameter("includeInactive", includeInactive);
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count beliefs by agent: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public long count() {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM BeliefEntity b",
                 Long.class
             );
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count all beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public long countActive() {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(b) FROM BeliefEntity b WHERE b.active = true",
                 Long.class
             );
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count active beliefs: " + e.getMessage(), e);
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public long countDistinctAgents() {
+        EntityManager em = entityManagerFactory.createEntityManager();
+        try {
+            TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(DISTINCT b.agentId) FROM BeliefEntity b WHERE b.active = true",
+                Long.class
+            );
+            return query.getSingleResult();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to count distinct agents: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<CategoryDistribution> getBeliefDistributionByCategory(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT b.category, COUNT(b) FROM BeliefEntity b " +
                          "WHERE b.active = true AND b.category IS NOT NULL " +
                          (agentId != null ? "AND b.agentId = :agentId " : "") +
                          "GROUP BY b.category ORDER BY COUNT(b) DESC";
             
-            TypedQuery<Object[]> query = entityManager.createQuery(jpql, Object[].class);
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -357,11 +526,14 @@ public class JpaBeliefRepository implements BeliefRepository {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get belief distribution by category: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<ConfidenceDistribution> getBeliefDistributionByConfidence(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT " +
                          "CASE " +
@@ -379,7 +551,7 @@ public class JpaBeliefRepository implements BeliefRepository {
                          "  ELSE 'low' " +
                          "END";
             
-            TypedQuery<Object[]> query = entityManager.createQuery(jpql, Object[].class);
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -389,6 +561,8 @@ public class JpaBeliefRepository implements BeliefRepository {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get belief distribution by confidence: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -404,23 +578,31 @@ public class JpaBeliefRepository implements BeliefRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
             int updated = 0;
             for (int i = 0; i < beliefs.size(); i++) {
-                entityManager.merge(beliefs.get(i));
+                em.merge(beliefs.get(i));
                 updated++;
                 
                 // Flush periodically for large batches
                 if (i % 50 == 0) {
-                    entityManager.flush();
-                    entityManager.clear();
+                    em.flush();
+                    em.clear();
                 }
             }
             
-            entityManager.flush();
+            em.getTransaction().commit();
             return updated;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to update beliefs in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -434,15 +616,26 @@ public class JpaBeliefRepository implements BeliefRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Integer> query = entityManager.createQuery(
+            em.getTransaction().begin();
+            
+            TypedQuery<Integer> query = em.createQuery(
                 "UPDATE BeliefEntity b SET b.active = false, b.lastUpdated = CURRENT_TIMESTAMP WHERE b.id IN :ids",
                 Integer.class
             );
             query.setParameter("ids", beliefIds);
-            return query.executeUpdate();
+            int result = query.executeUpdate();
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to deactivate beliefs in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -456,15 +649,26 @@ public class JpaBeliefRepository implements BeliefRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Integer> query = entityManager.createQuery(
+            em.getTransaction().begin();
+            
+            TypedQuery<Integer> query = em.createQuery(
                 "DELETE FROM BeliefEntity b WHERE b.id IN :ids",
                 Integer.class
             );
             query.setParameter("ids", beliefIds);
-            return query.executeUpdate();
+            int result = query.executeUpdate();
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete beliefs in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -472,33 +676,23 @@ public class JpaBeliefRepository implements BeliefRepository {
 
     @Override
     public void flush() {
-        try {
-            entityManager.flush();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to flush EntityManager: " + e.getMessage(), e);
-        }
+        // Note: flush() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
     public void clear() {
-        try {
-            entityManager.clear();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to clear EntityManager: " + e.getMessage(), e);
-        }
+        // Note: clear() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
     public void detach(BeliefEntity belief) {
-        if (belief == null) {
-            throw new IllegalArgumentException("Belief entity cannot be null");
-        }
-
-        try {
-            entityManager.detach(belief);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to detach belief entity: " + e.getMessage(), e);
-        }
+        // Note: detach() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
@@ -507,14 +701,51 @@ public class JpaBeliefRepository implements BeliefRepository {
             throw new IllegalArgumentException("Belief entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            entityManager.refresh(belief);
+            BeliefEntity managedEntity = em.find(BeliefEntity.class, belief.getId());
+            if (managedEntity != null) {
+                em.refresh(managedEntity);
+                // Copy refreshed values back to the parameter
+                belief.setStatement(managedEntity.getStatement());
+                belief.setConfidence(managedEntity.getConfidence());
+                belief.setActive(managedEntity.getActive());
+                belief.setLastUpdated(managedEntity.getLastUpdated());
+                // Copy other fields as needed
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to refresh belief entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     // ========== Private Helper Methods ==========
+
+    /**
+     * Checks if an entity exists by ID within a transaction context.
+     * Used by batch operations that already have an EntityManager.
+     * 
+     * @param id The ID to check
+     * @param em The EntityManager to use
+     * @return true if entity exists, false otherwise
+     */
+    private boolean existsByIdInTransaction(String id, EntityManager em) {
+        if (id == null || id.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(b) FROM BeliefEntity b WHERE b.id = :id",
+                Long.class
+            );
+            query.setParameter("id", id);
+            return query.getSingleResult() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /**
      * Extracts keywords from a statement for similarity search.

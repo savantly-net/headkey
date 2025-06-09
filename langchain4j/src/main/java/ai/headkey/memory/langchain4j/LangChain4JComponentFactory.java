@@ -1,11 +1,13 @@
 package ai.headkey.memory.langchain4j;
 
-import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-
 import java.util.Objects;
 import java.util.Set;
+
+import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
+import ai.headkey.memory.langchain4j.services.LangChain4jCategoryExtractionService;
+import ai.headkey.memory.langchain4j.services.LangChain4jTagExtractionService;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 
 /**
  * Factory class for creating LangChain4j-based HeadKey components.
@@ -32,15 +34,31 @@ public class LangChain4JComponentFactory {
     private static final int DEFAULT_MAX_TOKENS = 500;
     
     /**
-     * Creates a ContextualCategorizationEngine using the provided ChatLanguageModel.
+     * Creates a ContextualCategorizationEngine using the provided ChatModel.
      * 
-     * @param chatModel The LangChain4j ChatLanguageModel to use
+     * @param chatModel The LangChain4j ChatModel to use
      * @return Configured ContextualCategorizationEngine instance
      * @throws IllegalArgumentException if chatModel is null
      */
-    public static ContextualCategorizationEngine createCategorizationEngine(ChatLanguageModel chatModel) {
-        Objects.requireNonNull(chatModel, "ChatLanguageModel cannot be null");
+    public static ContextualCategorizationEngine createCategorizationEngine(ChatModel chatModel) {
+        Objects.requireNonNull(chatModel, "ChatModel cannot be null");
         return new LangChain4JContextualCategorizationEngine(chatModel);
+    }
+    
+    /**
+     * Creates a ContextualCategorizationEngine with custom services.
+     * 
+     * @param categoryService The category extraction service
+     * @param tagService The tag extraction service
+     * @return Configured ContextualCategorizationEngine instance
+     * @throws IllegalArgumentException if any service is null
+     */
+    public static ContextualCategorizationEngine createCategorizationEngine(
+            LangChain4jCategoryExtractionService categoryService,
+            LangChain4jTagExtractionService tagService) {
+        Objects.requireNonNull(categoryService, "CategoryExtractionService cannot be null");
+        Objects.requireNonNull(tagService, "TagExtractionService cannot be null");
+        return new LangChain4JContextualCategorizationEngine(categoryService, tagService);
     }
     
     /**
@@ -73,7 +91,7 @@ public class LangChain4JComponentFactory {
             throw new IllegalArgumentException("Model name cannot be null or empty");
         }
         
-        ChatLanguageModel chatModel = OpenAiChatModel.builder()
+        ChatModel chatModel = OpenAiChatModel.builder()
                 .apiKey(openAiApiKey.trim())
                 .modelName(modelName.trim())
                 .temperature(DEFAULT_TEMPERATURE)
@@ -107,17 +125,17 @@ public class LangChain4JComponentFactory {
      * Builder for creating customized ContextualCategorizationEngine instances.
      */
     public static class CategorizationEngineBuilder {
-        private ChatLanguageModel chatModel;
+        private ChatModel chatModel;
         private double confidenceThreshold = DEFAULT_CONFIDENCE_THRESHOLD;
         private Set<String> customCategories;
         
         /**
-         * Sets the ChatLanguageModel to use.
+         * Sets the ChatModel to use.
          * 
-         * @param chatModel The LangChain4j ChatLanguageModel
+         * @param chatModel The LangChain4j ChatModel
          * @return This builder instance
          */
-        public CategorizationEngineBuilder withChatModel(ChatLanguageModel chatModel) {
+        public CategorizationEngineBuilder withChatModel(ChatModel chatModel) {
             this.chatModel = chatModel;
             return this;
         }
@@ -186,11 +204,11 @@ public class LangChain4JComponentFactory {
          * Builds the ContextualCategorizationEngine with the configured settings.
          * 
          * @return Configured ContextualCategorizationEngine instance
-         * @throws IllegalStateException if no ChatLanguageModel has been configured
+         * @throws IllegalStateException if no ChatModel has been configured
          */
         public ContextualCategorizationEngine build() {
             if (chatModel == null) {
-                throw new IllegalStateException("ChatLanguageModel must be configured");
+                throw new IllegalStateException("ChatModel must be configured");
             }
             
             LangChain4JContextualCategorizationEngine engine = 
@@ -223,23 +241,23 @@ public class LangChain4JComponentFactory {
     public static class Providers {
         
         /**
-         * Creates OpenAI ChatLanguageModel with production-ready settings.
+         * Creates OpenAI ChatModel with production-ready settings.
          * 
          * @param apiKey OpenAI API key
-         * @return Configured ChatLanguageModel
+         * @return Configured ChatModel
          */
-        public static ChatLanguageModel openAi(String apiKey) {
+        public static ChatModel openAi(String apiKey) {
             return openAi(apiKey, "gpt-3.5-turbo");
         }
         
         /**
-         * Creates OpenAI ChatLanguageModel with specified model.
+         * Creates OpenAI ChatModel with specified model.
          * 
          * @param apiKey OpenAI API key
          * @param modelName Model name
-         * @return Configured ChatLanguageModel
+         * @return Configured ChatModel
          */
-        public static ChatLanguageModel openAi(String apiKey, String modelName) {
+        public static ChatModel openAi(String apiKey, String modelName) {
             return OpenAiChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(modelName)
@@ -249,13 +267,13 @@ public class LangChain4JComponentFactory {
         }
         
         /**
-         * Creates OpenAI ChatLanguageModel optimized for accuracy.
+         * Creates OpenAI ChatModel optimized for accuracy.
          * Uses GPT-4 with lower temperature for consistent results.
          * 
          * @param apiKey OpenAI API key
-         * @return Configured ChatLanguageModel
+         * @return Configured ChatModel
          */
-        public static ChatLanguageModel openAiAccurate(String apiKey) {
+        public static ChatModel openAiAccurate(String apiKey) {
             return OpenAiChatModel.builder()
                     .apiKey(apiKey)
                     .modelName("gpt-4")
@@ -265,13 +283,13 @@ public class LangChain4JComponentFactory {
         }
         
         /**
-         * Creates OpenAI ChatLanguageModel optimized for speed and cost.
+         * Creates OpenAI ChatModel optimized for speed and cost.
          * Uses GPT-3.5-turbo with optimized settings.
          * 
          * @param apiKey OpenAI API key
-         * @return Configured ChatLanguageModel
+         * @return Configured ChatModel
          */
-        public static ChatLanguageModel openAiFast(String apiKey) {
+        public static ChatModel openAiFast(String apiKey) {
             return OpenAiChatModel.builder()
                     .apiKey(apiKey)
                     .modelName("gpt-3.5-turbo")

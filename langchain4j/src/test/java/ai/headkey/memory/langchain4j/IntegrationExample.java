@@ -1,11 +1,17 @@
 package ai.headkey.memory.langchain4j;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-
-import java.util.*;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
 
 /**
  * Complete integration example showing LangChain4j ContextualCategorizationEngine usage.
@@ -25,7 +31,7 @@ public class IntegrationExample {
     
     private final ContextualCategorizationEngine categorizationEngine;
     
-    public IntegrationExample(ChatLanguageModel chatModel) {
+    public IntegrationExample(ChatModel chatModel) {
         // Create engine using factory with custom configuration
         this.categorizationEngine = LangChain4JComponentFactory.builder()
                 .withChatModel(chatModel)
@@ -296,11 +302,11 @@ public class IntegrationExample {
      */
     private Metadata createMetadata(String userId, String source, String type) {
         Metadata metadata = new Metadata();
-        metadata.put("userId", userId);
-        metadata.put("source", source);
-        metadata.put("type", type);
-        metadata.put("timestamp", System.currentTimeMillis());
-        metadata.put("priority", "normal");
+        metadata.setProperty("userId", userId);
+        metadata.setProperty("source", source);
+        metadata.setProperty("type", type);
+        metadata.setProperty("timestamp", System.currentTimeMillis());
+        metadata.setProperty("priority", "normal");
         return metadata;
     }
     
@@ -333,7 +339,7 @@ public class IntegrationExample {
      */
     public static void main(String[] args) {
         // Create a mock chat model for demonstration
-        ChatLanguageModel mockModel = createDemoChatModel();
+        ChatModel mockModel = createDemoChatModel();
         
         // Run the integration example
         IntegrationExample example = new IntegrationExample(mockModel);
@@ -343,7 +349,7 @@ public class IntegrationExample {
         System.out.println("\nTo use with a real LLM provider:");
         System.out.println("1. Add your API key to environment variables");
         System.out.println("2. Replace mockModel with actual provider:");
-        System.out.println("   ChatLanguageModel model = OpenAiChatModel.builder()");
+        System.out.println("   ChatModel model = OpenAiChatModel.builder()");
         System.out.println("       .apiKey(System.getenv(\"OPENAI_API_KEY\"))");
         System.out.println("       .modelName(\"gpt-3.5-turbo\")");
         System.out.println("       .build();");
@@ -353,12 +359,12 @@ public class IntegrationExample {
      * Creates a demo chat model that provides realistic responses
      * for demonstration purposes without requiring an actual LLM API.
      */
-    private static ChatLanguageModel createDemoChatModel() {
-        return new ChatLanguageModel() {
+    private static ChatModel createDemoChatModel() {
+        return new ChatModel() {
             private final Random random = new Random(42); // Fixed seed for consistent results
             
             @Override
-            public String generate(String userMessage) {
+            public String chat(String userMessage) {
                 // Analyze the message content to provide realistic categorization responses
                 String content = userMessage.toLowerCase();
                 
@@ -437,6 +443,12 @@ public class IntegrationExample {
                         }
                         """, confidence);
                 }
+            }
+
+            @Override
+            public ChatResponse chat(List<ChatMessage> messages) {
+                // TODO Auto-generated method stub
+                throw new UnsupportedOperationException("Unimplemented method 'generate'");
             }
         };
     }

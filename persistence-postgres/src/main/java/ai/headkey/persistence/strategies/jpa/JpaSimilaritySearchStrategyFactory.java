@@ -33,12 +33,6 @@ public class JpaSimilaritySearchStrategyFactory {
             switch (dbType) {
                 case POSTGRESQL:
                     return createPostgreSQLStrategy(entityManager);
-                case H2:
-                case HSQLDB:
-                case MYSQL:
-                case MARIADB:
-                    return new TextBasedJpaSimilaritySearchStrategy();
-                case UNKNOWN:
                 default:
                     return new DefaultJpaSimilaritySearchStrategy();
             }

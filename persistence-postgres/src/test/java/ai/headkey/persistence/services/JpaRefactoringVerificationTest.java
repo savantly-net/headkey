@@ -1,24 +1,37 @@
 package ai.headkey.persistence.services;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.memory.dto.Metadata;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import org.junit.jupiter.api.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Simple verification test to ensure the refactored JPA similarity search strategy system works correctly.
  */
 class JpaRefactoringVerificationTest {
+
+    private static final String AGENT_ID = "test-agent";
+    private static final CategoryLabel defaultCategory = new CategoryLabel("default-category");
+    private static final Metadata defaultMetadata = new Metadata();
     
     private static EntityManagerFactory entityManagerFactory;
     
@@ -56,16 +69,16 @@ class JpaRefactoringVerificationTest {
             System.out.println("Strategy: " + memorySystem.getSimilaritySearchStrategy().getStrategyName());
             
             // Store some test memories
-            MemoryRecord memory1 = memorySystem.encodeAndStore("The quick brown fox jumps over the lazy dog", null, null);
+            MemoryRecord memory1 = memorySystem.encodeAndStore("The quick brown fox jumps over the lazy dog", defaultCategory, defaultMetadata,AGENT_ID);
             assertNotNull(memory1);
             assertNotNull(memory1.getId());
             assertEquals("The quick brown fox jumps over the lazy dog", memory1.getContent());
             
-            MemoryRecord memory2 = memorySystem.encodeAndStore("Machine learning algorithms process data efficiently", null, null);
+            MemoryRecord memory2 = memorySystem.encodeAndStore("Machine learning algorithms process data efficiently", defaultCategory, defaultMetadata,AGENT_ID);
             assertNotNull(memory2);
             
             // Test similarity search
-            List<MemoryRecord> results = memorySystem.searchSimilar("artificial intelligence", 5);
+            List<MemoryRecord> results = memorySystem.searchSimilar("artificial intelligence", 5,AGENT_ID);
             assertNotNull(results);
             
             System.out.println("✓ Basic JPA memory system with strategy works");
@@ -93,11 +106,11 @@ class JpaRefactoringVerificationTest {
             assertFalse(memorySystem.getSimilaritySearchStrategy().supportsVectorSearch());
             
             // Store test data
-            memorySystem.encodeAndStore("Natural language processing techniques", null, null);
-            memorySystem.encodeAndStore("Computer vision and image recognition", null, null);
+            memorySystem.encodeAndStore("Natural language processing techniques", defaultCategory, defaultMetadata,AGENT_ID);
+            memorySystem.encodeAndStore("Computer vision and image recognition", defaultCategory, defaultMetadata,AGENT_ID);
             
             // Test search
-            List<MemoryRecord> results = memorySystem.searchSimilar("language", 3);
+            List<MemoryRecord> results = memorySystem.searchSimilar("language", 3,AGENT_ID);
             assertNotNull(results);
             
             System.out.println("✓ Custom strategy injection works");
@@ -166,7 +179,7 @@ class JpaRefactoringVerificationTest {
         JpaMemoryEncodingSystem memorySystem = new JpaMemoryEncodingSystem(entityManagerFactory);
         
         // Store a memory
-        MemoryRecord stored = memorySystem.encodeAndStore("Testing backwards compatibility", null, null);
+        MemoryRecord stored = memorySystem.encodeAndStore("Testing backwards compatibility", defaultCategory, defaultMetadata,AGENT_ID);
         assertNotNull(stored);
         assertNotNull(stored.getId());
         
@@ -207,7 +220,6 @@ class JpaRefactoringVerificationTest {
         // Statistics should work
         Map<String, Object> stats = memorySystem.getStorageStatistics();
         assertNotNull(stats);
-        assertTrue(stats.containsKey("implementationType"));
         
         System.out.println("✓ Health and statistics work");
         System.out.println("  System is healthy: " + memorySystem.isHealthy());

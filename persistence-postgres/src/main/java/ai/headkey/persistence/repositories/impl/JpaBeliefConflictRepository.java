@@ -4,9 +4,8 @@ import ai.headkey.persistence.entities.BeliefConflictEntity;
 import ai.headkey.persistence.repositories.BeliefConflictRepository;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.TypedQuery;
-import jakarta.transaction.Transactional;
 
 import java.time.Instant;
 import java.util.*;
@@ -28,16 +27,40 @@ import java.util.stream.Collectors;
  * 
  * @since 1.0
  */
-@Transactional
 public class JpaBeliefConflictRepository implements BeliefConflictRepository {
 
-    private final EntityManager entityManager;
+    private final EntityManagerFactory entityManagerFactory;
 
     /**
-     * Constructor with EntityManager dependency.
+     * Constructor with EntityManagerFactory dependency.
      */
-    public JpaBeliefConflictRepository(EntityManager entityManager) {
-        this.entityManager = entityManager;
+    public JpaBeliefConflictRepository(EntityManagerFactory entityManagerFactory) {
+        this.entityManagerFactory = entityManagerFactory;
+    }
+
+    /**
+     * Checks if an entity exists by ID within a transaction context.
+     * Used by batch operations that already have an EntityManager.
+     * 
+     * @param id The ID to check
+     * @param em The EntityManager to use
+     * @return true if entity exists, false otherwise
+     */
+    private boolean existsByIdInTransaction(String id, EntityManager em) {
+        if (id == null || id.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(c) FROM BeliefConflictEntity c WHERE c.id = :id",
+                Long.class
+            );
+            query.setParameter("id", id);
+            return query.getSingleResult() > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // ========== Basic CRUD Operations ==========
@@ -48,15 +71,27 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Conflict entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
+            BeliefConflictEntity result;
             if (conflict.getId() != null && existsById(conflict.getId())) {
-                return entityManager.merge(conflict);
+                result = em.merge(conflict);
             } else {
-                entityManager.persist(conflict);
-                return conflict;
+                em.persist(conflict);
+                result = conflict;
             }
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to save conflict entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -66,38 +101,57 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Conflicts list cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         List<BeliefConflictEntity> savedEntities = new ArrayList<>();
         
         try {
+            em.getTransaction().begin();
+            
             for (int i = 0; i < conflicts.size(); i++) {
-                BeliefConflictEntity saved = save(conflicts.get(i));
+                BeliefConflictEntity conflict = conflicts.get(i);
+                
+                BeliefConflictEntity saved;
+                if (conflict.getId() != null && existsByIdInTransaction(conflict.getId(), em)) {
+                    saved = em.merge(conflict);
+                } else {
+                    em.persist(conflict);
+                    saved = conflict;
+                }
                 savedEntities.add(saved);
                 
                 // Flush periodically for large batches
                 if (i % 50 == 0) {
-                    entityManager.flush();
-                    entityManager.clear();
+                    em.flush();
+                    em.clear();
                 }
             }
             
-            entityManager.flush();
+            em.getTransaction().commit();
             return savedEntities;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to save conflict entities: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public Optional<BeliefConflictEntity> findById(String id) {
         if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID cannot be null or empty");
+            return Optional.empty();
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            BeliefConflictEntity entity = entityManager.find(BeliefConflictEntity.class, id);
+            BeliefConflictEntity entity = em.find(BeliefConflictEntity.class, id);
             return Optional.ofNullable(entity);
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflict by ID: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -111,8 +165,9 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return new ArrayList<>();
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(
                 "SELECT c FROM BeliefConflictEntity c WHERE c.id IN :ids ORDER BY c.detectedAt DESC",
                 BeliefConflictEntity.class
             );
@@ -120,6 +175,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by IDs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -129,15 +186,25 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            BeliefConflictEntity entity = entityManager.find(BeliefConflictEntity.class, id);
+            em.getTransaction().begin();
+            
+            BeliefConflictEntity entity = em.find(BeliefConflictEntity.class, id);
             if (entity != null) {
-                entityManager.remove(entity);
+                em.remove(entity);
+                em.getTransaction().commit();
                 return true;
             }
+            em.getTransaction().commit();
             return false;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete conflict by ID: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -147,17 +214,27 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Conflict entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            if (entityManager.contains(conflict)) {
-                entityManager.remove(conflict);
+            em.getTransaction().begin();
+            
+            if (em.contains(conflict)) {
+                em.remove(conflict);
             } else {
-                BeliefConflictEntity managed = entityManager.find(BeliefConflictEntity.class, conflict.getId());
+                BeliefConflictEntity managed = em.find(BeliefConflictEntity.class, conflict.getId());
                 if (managed != null) {
-                    entityManager.remove(managed);
+                    em.remove(managed);
                 }
             }
+            
+            em.getTransaction().commit();
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete conflict entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -167,8 +244,9 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return false;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(c) FROM BeliefConflictEntity c WHERE c.id = :id",
                 Long.class
             );
@@ -176,6 +254,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getSingleResult() > 0;
         } catch (Exception e) {
             return false;
+        } finally {
+            em.close();
         }
     }
 
@@ -183,13 +263,16 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
 
     @Override
     public List<BeliefConflictEntity> findUnresolved(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefConflictEntity> query = entityManager.createNamedQuery(
+            TypedQuery<BeliefConflictEntity> query = em.createNamedQuery(
                 "BeliefConflictEntity.findUnresolved", BeliefConflictEntity.class);
             query.setParameter("agentId", agentId);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find unresolved conflicts: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -199,13 +282,16 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefConflictEntity> query = entityManager.createNamedQuery(
+            TypedQuery<BeliefConflictEntity> query = em.createNamedQuery(
                 "BeliefConflictEntity.findByAgent", BeliefConflictEntity.class);
             query.setParameter("agentId", agentId);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by agent: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -215,13 +301,16 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Strategy cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<BeliefConflictEntity> query = entityManager.createNamedQuery(
+            TypedQuery<BeliefConflictEntity> query = em.createNamedQuery(
                 "BeliefConflictEntity.findByResolutionStrategy", BeliefConflictEntity.class);
             query.setParameter("strategy", strategy);
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by resolution strategy: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -235,9 +324,10 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return new ArrayList<>();
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             // This is a more complex query since conflicting belief IDs are stored as a collection
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(
                 "SELECT DISTINCT c FROM BeliefConflictEntity c JOIN c.conflictingBeliefIds beliefId WHERE beliefId IN :beliefIds ORDER BY c.detectedAt DESC",
                 BeliefConflictEntity.class
             );
@@ -245,6 +335,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by belief IDs: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -254,12 +346,13 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Conflict type cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c FROM BeliefConflictEntity c WHERE c.conflictType = :conflictType" +
                          (agentId != null ? " AND c.agentId = :agentId" : "") +
                          " ORDER BY c.detectedAt DESC";
             
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(jpql, BeliefConflictEntity.class);
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(jpql, BeliefConflictEntity.class);
             query.setParameter("conflictType", conflictType);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
@@ -267,6 +360,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by type: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -276,12 +371,13 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Severity cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c FROM BeliefConflictEntity c WHERE c.severity = :severity" +
                          (agentId != null ? " AND c.agentId = :agentId" : "") +
                          " ORDER BY c.detectedAt DESC";
             
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(jpql, BeliefConflictEntity.class);
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(jpql, BeliefConflictEntity.class);
             query.setParameter("severity", severity);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
@@ -289,6 +385,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by severity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -301,12 +399,13 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Start time cannot be after end time");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c FROM BeliefConflictEntity c WHERE c.detectedAt BETWEEN :startTime AND :endTime" +
                          (agentId != null ? " AND c.agentId = :agentId" : "") +
                          " ORDER BY c.detectedAt DESC";
             
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(jpql, BeliefConflictEntity.class);
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(jpql, BeliefConflictEntity.class);
             query.setParameter("startTime", startTime);
             query.setParameter("endTime", endTime);
             if (agentId != null) {
@@ -315,40 +414,48 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts by detection time range: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<BeliefConflictEntity> findAutoResolvable(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c FROM BeliefConflictEntity c WHERE c.autoResolvable = true AND c.resolved = false" +
                          (agentId != null ? " AND c.agentId = :agentId" : "") +
                          " ORDER BY c.detectedAt DESC";
             
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(jpql, BeliefConflictEntity.class);
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(jpql, BeliefConflictEntity.class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find auto-resolvable conflicts: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<BeliefConflictEntity> findRequiringManualReview(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c FROM BeliefConflictEntity c WHERE c.autoResolvable = false AND c.resolved = false" +
                          (agentId != null ? " AND c.agentId = :agentId" : "") +
                          " ORDER BY c.detectedAt DESC";
             
-            TypedQuery<BeliefConflictEntity> query = entityManager.createQuery(jpql, BeliefConflictEntity.class);
+            TypedQuery<BeliefConflictEntity> query = em.createQuery(jpql, BeliefConflictEntity.class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
             return query.getResultList();
         } catch (Exception e) {
             throw new RuntimeException("Failed to find conflicts requiring manual review: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -360,8 +467,9 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(c) FROM BeliefConflictEntity c WHERE c.agentId = :agentId",
                 Long.class
             );
@@ -369,43 +477,52 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count conflicts by agent: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public long countUnresolved(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createNamedQuery(
+            TypedQuery<Long> query = em.createNamedQuery(
                 "BeliefConflictEntity.countUnresolved", Long.class);
             query.setParameter("agentId", agentId);
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count unresolved conflicts: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public long count() {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Long> query = entityManager.createQuery(
+            TypedQuery<Long> query = em.createQuery(
                 "SELECT COUNT(c) FROM BeliefConflictEntity c",
                 Long.class
             );
             return query.getSingleResult();
         } catch (Exception e) {
             throw new RuntimeException("Failed to count all conflicts: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<ConflictTypeDistribution> getConflictDistributionByType(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c.conflictType, COUNT(c) FROM BeliefConflictEntity c " +
                          "WHERE c.conflictType IS NOT NULL " +
                          (agentId != null ? "AND c.agentId = :agentId " : "") +
                          "GROUP BY c.conflictType ORDER BY COUNT(c) DESC";
             
-            TypedQuery<Object[]> query = entityManager.createQuery(jpql, Object[].class);
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -415,18 +532,21 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get conflict distribution by type: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<ConflictSeverityDistribution> getConflictDistributionBySeverity(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT c.severity, COUNT(c) FROM BeliefConflictEntity c " +
                          "WHERE c.severity IS NOT NULL " +
                          (agentId != null ? "AND c.agentId = :agentId " : "") +
                          "GROUP BY c.severity ORDER BY COUNT(c) DESC";
             
-            TypedQuery<Object[]> query = entityManager.createQuery(jpql, Object[].class);
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -436,11 +556,14 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get conflict distribution by severity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public List<ConflictResolutionDistribution> getConflictDistributionByResolution(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT " +
                          "CASE WHEN c.resolved = true THEN 'resolved' ELSE 'unresolved' END, " +
@@ -448,7 +571,7 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
                          (agentId != null ? "WHERE c.agentId = :agentId " : "") +
                          "GROUP BY c.resolved ORDER BY COUNT(c) DESC";
             
-            TypedQuery<Object[]> query = entityManager.createQuery(jpql, Object[].class);
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -458,18 +581,21 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Failed to get conflict distribution by resolution: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
     @Override
     public double getAverageResolutionTime(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
             String jpql = "SELECT AVG(EXTRACT(EPOCH FROM (c.resolvedAt - c.detectedAt))) " +
                          "FROM BeliefConflictEntity c " +
                          "WHERE c.resolved = true AND c.resolvedAt IS NOT NULL AND c.detectedAt IS NOT NULL " +
                          (agentId != null ? "AND c.agentId = :agentId" : "");
             
-            TypedQuery<Double> query = entityManager.createQuery(jpql, Double.class);
+            TypedQuery<Double> query = em.createQuery(jpql, Double.class);
             if (agentId != null) {
                 query.setParameter("agentId", agentId);
             }
@@ -478,6 +604,8 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return result != null ? result : 0.0;
         } catch (Exception e) {
             throw new RuntimeException("Failed to get average resolution time: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -493,23 +621,31 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
             int updated = 0;
             for (int i = 0; i < conflicts.size(); i++) {
-                entityManager.merge(conflicts.get(i));
+                em.merge(conflicts.get(i));
                 updated++;
                 
                 // Flush periodically for large batches
                 if (i % 50 == 0) {
-                    entityManager.flush();
-                    entityManager.clear();
+                    em.flush();
+                    em.clear();
                 }
             }
             
-            entityManager.flush();
+            em.getTransaction().commit();
             return updated;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to update conflicts in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -523,7 +659,10 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
+            em.getTransaction().begin();
+            
             String jpql = "UPDATE BeliefConflictEntity c SET " +
                          "c.resolved = true, " +
                          "c.resolvedAt = CURRENT_TIMESTAMP, " +
@@ -532,13 +671,21 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
                          "c.lastUpdated = CURRENT_TIMESTAMP " +
                          "WHERE c.id IN :ids";
             
-            TypedQuery<Integer> query = entityManager.createQuery(jpql, Integer.class);
+            TypedQuery<Integer> query = em.createQuery(jpql, Integer.class);
             query.setParameter("strategy", resolutionStrategy);
             query.setParameter("notes", resolutionNotes);
             query.setParameter("ids", conflictIds);
-            return query.executeUpdate();
+            int result = query.executeUpdate();
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to mark conflicts as resolved in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -552,15 +699,26 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             return 0;
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Integer> query = entityManager.createQuery(
+            em.getTransaction().begin();
+            
+            TypedQuery<Integer> query = em.createQuery(
                 "DELETE FROM BeliefConflictEntity c WHERE c.id IN :ids",
                 Integer.class
             );
             query.setParameter("ids", conflictIds);
-            return query.executeUpdate();
+            int result = query.executeUpdate();
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete conflicts in batch: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -570,15 +728,26 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Older than timestamp cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            TypedQuery<Integer> query = entityManager.createQuery(
+            em.getTransaction().begin();
+            
+            TypedQuery<Integer> query = em.createQuery(
                 "DELETE FROM BeliefConflictEntity c WHERE c.resolved = true AND c.resolvedAt < :olderThan",
                 Integer.class
             );
             query.setParameter("olderThan", olderThan);
-            return query.executeUpdate();
+            int result = query.executeUpdate();
+            
+            em.getTransaction().commit();
+            return result;
         } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             throw new RuntimeException("Failed to delete old resolved conflicts: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 
@@ -586,33 +755,23 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
 
     @Override
     public void flush() {
-        try {
-            entityManager.flush();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to flush EntityManager: " + e.getMessage(), e);
-        }
+        // Note: flush() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
     public void clear() {
-        try {
-            entityManager.clear();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to clear EntityManager: " + e.getMessage(), e);
-        }
+        // Note: clear() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
     public void detach(BeliefConflictEntity conflict) {
-        if (conflict == null) {
-            throw new IllegalArgumentException("Conflict entity cannot be null");
-        }
-
-        try {
-            entityManager.detach(conflict);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to detach conflict entity: " + e.getMessage(), e);
-        }
+        // Note: detach() doesn't make sense with EntityManagerFactory pattern
+        // since each operation uses its own EntityManager
+        // This method is kept for interface compatibility but is essentially a no-op
     }
 
     @Override
@@ -621,10 +780,23 @@ public class JpaBeliefConflictRepository implements BeliefConflictRepository {
             throw new IllegalArgumentException("Conflict entity cannot be null");
         }
 
+        EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            entityManager.refresh(conflict);
+            BeliefConflictEntity managedEntity = em.find(BeliefConflictEntity.class, conflict.getId());
+            if (managedEntity != null) {
+                em.refresh(managedEntity);
+                // Copy refreshed values back to the parameter
+                conflict.setResolved(managedEntity.isResolved());
+                conflict.setResolvedAt(managedEntity.getResolvedAt());
+                conflict.setResolutionStrategy(managedEntity.getResolutionStrategy());
+                conflict.setResolutionNotes(managedEntity.getResolutionNotes());
+                conflict.setLastUpdated(managedEntity.getLastUpdated());
+                // Copy other fields as needed
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to refresh conflict entity: " + e.getMessage(), e);
+        } finally {
+            em.close();
         }
     }
 }

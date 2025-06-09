@@ -55,7 +55,7 @@ public interface MemoryEncodingSystem {
      * 
      * @since 1.0
      */
-    MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta);
+    MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta, String agentId);
     
     /**
      * Retrieves a stored memory by its unique identifier.
@@ -152,7 +152,7 @@ public interface MemoryEncodingSystem {
      * 
      * @since 1.0
      */
-    List<MemoryRecord> searchSimilar(String queryContent, int limit);
+    List<MemoryRecord> searchSimilar(String queryContent, int limit, String agentId);
     
     /**
      * Finds memories for a specific agent.

@@ -34,22 +34,24 @@ public class BeliefConflictMapper {
         BeliefConflictEntity entity = new BeliefConflictEntity();
         
         // Copy basic fields
-        entity.setId(conflict.getId());
+        entity.setId(conflict.getConflictId());
         entity.setAgentId(conflict.getAgentId());
         entity.setDescription(conflict.getDescription());
-        entity.setConflictType(conflict.getConflictType());
+        entity.setConflictType("GENERAL"); // Default type since BeliefConflict doesn't have getConflictType()
         entity.setDetectedAt(conflict.getDetectedAt());
         entity.setResolved(conflict.isResolved());
         entity.setResolvedAt(conflict.getResolvedAt());
-        entity.setResolutionStrategy(conflict.getResolutionStrategy());
-        entity.setResolutionNotes(conflict.getResolutionNotes());
-        entity.setNewEvidenceMemoryId(conflict.getNewEvidenceMemoryId());
+        entity.setResolutionStrategy(conflict.getResolution() != null ? conflict.getResolution().toString() : null);
+        entity.setResolutionNotes(conflict.getResolutionDetails());
+        entity.setNewEvidenceMemoryId(conflict.getMemoryId()); // Use memoryId as new evidence
         entity.setSeverity(conflict.getSeverity());
-        entity.setAutoResolvable(conflict.isAutoResolvable());
+        entity.setAutoResolvable(false); // Default value since BeliefConflict doesn't have isAutoResolvable()
         
-        // Copy collections
-        if (conflict.getConflictingBeliefIds() != null) {
-            entity.setConflictingBeliefIds(new ArrayList<>(conflict.getConflictingBeliefIds()));
+        // Copy collections - convert single conflicting belief ID to list
+        if (conflict.getConflictingBeliefId() != null) {
+            List<String> conflictingIds = new ArrayList<>();
+            conflictingIds.add(conflict.getConflictingBeliefId());
+            entity.setConflictingBeliefIds(conflictingIds);
         }
         
         return entity;
@@ -69,22 +71,30 @@ public class BeliefConflictMapper {
         BeliefConflict conflict = new BeliefConflict();
         
         // Copy basic fields
-        conflict.setId(entity.getId());
+        conflict.setConflictId(entity.getId());
         conflict.setAgentId(entity.getAgentId());
         conflict.setDescription(entity.getDescription());
-        conflict.setConflictType(entity.getConflictType());
+        // Note: BeliefConflict doesn't have setConflictType() method
         conflict.setDetectedAt(entity.getDetectedAt());
         conflict.setResolved(entity.getResolved());
         conflict.setResolvedAt(entity.getResolvedAt());
-        conflict.setResolutionStrategy(entity.getResolutionStrategy());
-        conflict.setResolutionNotes(entity.getResolutionNotes());
-        conflict.setNewEvidenceMemoryId(entity.getNewEvidenceMemoryId());
+        // Convert resolution strategy string back to enum if needed
+        if (entity.getResolutionStrategy() != null) {
+            try {
+                conflict.setResolution(ai.headkey.memory.enums.ConflictResolution.valueOf(entity.getResolutionStrategy()));
+            } catch (IllegalArgumentException e) {
+                // Handle invalid enum values gracefully
+                conflict.setResolution(null);
+            }
+        }
+        conflict.setResolutionDetails(entity.getResolutionNotes());
+        conflict.setMemoryId(entity.getNewEvidenceMemoryId()); // Map back to memoryId
         conflict.setSeverity(entity.getSeverity());
-        conflict.setAutoResolvable(entity.getAutoResolvable());
+        // Note: BeliefConflict doesn't have setAutoResolvable() method
         
-        // Copy collections
-        if (entity.getConflictingBeliefIds() != null) {
-            conflict.setConflictingBeliefIds(new ArrayList<>(entity.getConflictingBeliefIds()));
+        // Copy collections - take first conflicting belief ID if available
+        if (entity.getConflictingBeliefIds() != null && !entity.getConflictingBeliefIds().isEmpty()) {
+            conflict.setConflictingBeliefId(entity.getConflictingBeliefIds().get(0));
         }
         
         return conflict;
@@ -107,23 +117,25 @@ public class BeliefConflictMapper {
         // Update basic fields (ID should not change)
         entity.setAgentId(conflict.getAgentId());
         entity.setDescription(conflict.getDescription());
-        entity.setConflictType(conflict.getConflictType());
+        entity.setConflictType("GENERAL"); // Default type since BeliefConflict doesn't have getConflictType()
         entity.setResolved(conflict.isResolved());
         entity.setResolvedAt(conflict.getResolvedAt());
-        entity.setResolutionStrategy(conflict.getResolutionStrategy());
-        entity.setResolutionNotes(conflict.getResolutionNotes());
-        entity.setNewEvidenceMemoryId(conflict.getNewEvidenceMemoryId());
+        entity.setResolutionStrategy(conflict.getResolution() != null ? conflict.getResolution().toString() : null);
+        entity.setResolutionNotes(conflict.getResolutionDetails());
+        entity.setNewEvidenceMemoryId(conflict.getMemoryId());
         entity.setSeverity(conflict.getSeverity());
-        entity.setAutoResolvable(conflict.isAutoResolvable());
+        entity.setAutoResolvable(false); // Default value since BeliefConflict doesn't have isAutoResolvable()
         
         // Update timestamps from DTO if they're newer or if entity doesn't have them
         if (conflict.getDetectedAt() != null && entity.getDetectedAt() == null) {
             entity.setDetectedAt(conflict.getDetectedAt());
         }
         
-        // Update collections
-        if (conflict.getConflictingBeliefIds() != null) {
-            entity.setConflictingBeliefIds(new ArrayList<>(conflict.getConflictingBeliefIds()));
+        // Update collections - convert single conflicting belief ID to list
+        if (conflict.getConflictingBeliefId() != null) {
+            List<String> conflictingIds = new ArrayList<>();
+            conflictingIds.add(conflict.getConflictingBeliefId());
+            entity.setConflictingBeliefIds(conflictingIds);
         }
     }
 

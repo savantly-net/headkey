@@ -172,6 +172,13 @@ public interface BeliefRepository {
     long countActive();
 
     /**
+     * Counts distinct agents that have beliefs in the system.
+     * 
+     * @return Count of distinct agent IDs
+     */
+    long countDistinctAgents();
+
+    /**
      * Gets belief distribution by category.
      * 
      * @param agentId Optional agent filter (null for all agents)

@@ -1,15 +1,21 @@
 package ai.headkey.persistence.services;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import org.junit.jupiter.api.*;
-
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Minimal test to debug JPA setup issues.
@@ -89,7 +95,6 @@ class JpaMemoryEncodingSystemMinimalTest {
             category.setConfidence(0.9);
             
             Metadata metadata = new Metadata();
-            metadata.setProperty("agentId", "test-agent");
             metadata.setImportance(0.5);
             metadata.setSource("test");
             
@@ -98,7 +103,7 @@ class JpaMemoryEncodingSystemMinimalTest {
             
             // Store memory
             System.out.println("Storing memory...");
-            MemoryRecord stored = simpleSystem.encodeAndStore("Test content", category, metadata);
+            MemoryRecord stored = simpleSystem.encodeAndStore("Test content", category, metadata,"test-agent");
             System.out.println("Memory stored with ID: " + stored.getId());
             
             assertNotNull(stored);

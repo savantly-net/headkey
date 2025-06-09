@@ -44,6 +44,7 @@ public class JpaBeliefStorageServiceFactory {
      */
     public static class Builder {
         private EntityManagerFactory entityManagerFactory;
+        private EntityManager entityManager;
         private DataSource dataSource;
         private Map<String, Object> jpaProperties = new HashMap<>();
         private String persistenceUnitName = "headkey-beliefs-postgresql";
@@ -52,6 +53,11 @@ public class JpaBeliefStorageServiceFactory {
 
         public Builder withEntityManagerFactory(EntityManagerFactory entityManagerFactory) {
             this.entityManagerFactory = Objects.requireNonNull(entityManagerFactory, "EntityManagerFactory cannot be null");
+            return this;
+        }
+
+        public Builder withEntityManager(EntityManager entityManager) {
+            this.entityManager = Objects.requireNonNull(entityManager, "EntityManager cannot be null");
             return this;
         }
 
@@ -95,10 +101,10 @@ public class JpaBeliefStorageServiceFactory {
             if (emf == null) {
                 emf = createEntityManagerFactory();
             }
-
-            // Create repositories
-            BeliefRepository beliefRepository = new JpaBeliefRepository();
-            BeliefConflictRepository conflictRepository = new JpaBeliefConflictRepository();
+            
+            // Create repositories with EntityManagerFactory
+            BeliefRepository beliefRepository = new JpaBeliefRepository(emf);
+            BeliefConflictRepository conflictRepository = new JpaBeliefConflictRepository(emf);
 
             // Create and return service
             return new JpaBeliefStorageService(beliefRepository, conflictRepository);
@@ -273,7 +279,7 @@ public class JpaBeliefStorageServiceFactory {
         testProperties.put("hibernate.jdbc.batch_size", "10");
         
         return builder()
-            .withPersistenceUnitName("headkey-beliefs-test")
+            .withPersistenceUnitName("headkey-beliefs-h2-test")
             .withJpaProperties(testProperties)
             .withAutoCreateSchema(true)
             .withStatistics(false)

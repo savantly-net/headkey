@@ -1,8 +1,6 @@
 package ai.headkey.persistence.strategies.jpa;
 
 import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.persistence.entities.MemoryEntity;
-import ai.headkey.memory.exceptions.StorageException;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -29,17 +27,14 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
             m.id,
             m.agent_id,
             m.content,
-            m.category_primary,
-            m.category_secondary,
-            m.category_tags,
-            m.category_confidence,
+            m.category,
             m.relevance_score,
             m.created_at,
             m.last_accessed,
-            m.metadata_json,
+            m.metadata,
             m.embedding,
             (1 - (m.embedding <=> CAST(:queryVector AS vector))) as similarity
-        FROM memory_entities m 
+        FROM memory_records m 
         WHERE m.embedding IS NOT NULL 
         AND (:agentId IS NULL OR m.agent_id = :agentId)
         AND (1 - (m.embedding <=> CAST(:queryVector AS vector))) >= :threshold
@@ -52,17 +47,14 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
             m.id,
             m.agent_id,
             m.content,
-            m.category_primary,
-            m.category_secondary,
-            m.category_tags,
-            m.category_confidence,
+            m.category,
             m.relevance_score,
             m.created_at,
             m.last_accessed,
-            m.metadata_json,
+            m.metadata,
             m.embedding,
             similarity(m.content, :queryContent) as text_similarity
-        FROM memory_entities m 
+        FROM memory_records m 
         WHERE (:agentId IS NULL OR m.agent_id = :agentId)
         AND similarity(m.content, :queryContent) > 0.1
         ORDER BY text_similarity DESC
@@ -74,16 +66,13 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
             m.id,
             m.agent_id,
             m.content,
-            m.category_primary,
-            m.category_secondary,
-            m.category_tags,
-            m.category_confidence,
+            m.category,
             m.relevance_score,
             m.created_at,
             m.last_accessed,
-            m.metadata_json,
+            m.metadata,
             m.embedding
-        FROM memory_entities m 
+        FROM memory_records m 
         WHERE LOWER(m.content) LIKE LOWER(:query)
         AND (:agentId IS NULL OR m.agent_id = :agentId)
         ORDER BY m.last_accessed DESC
@@ -91,7 +80,7 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
         """;
     
     private static final String UPDATE_LAST_ACCESSED_QUERY = """
-        UPDATE memory_entities 
+        UPDATE memory_records 
         SET last_accessed = CURRENT_TIMESTAMP 
         WHERE id = ANY(:ids)
         """;
@@ -225,8 +214,7 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
     
     private MemoryRecord mapResultToMemoryRecord(Object[] row) {
         // Assuming the query returns columns in this order:
-        // id, agent_id, content, category_primary, category_secondary, category_tags,
-        // category_confidence, relevance_score, created_at, last_accessed, metadata_json, embedding
+        // id, agent_id, content, category, relevance_score, created_at, last_accessed, metadata, embedding
         
         MemoryRecord record = new MemoryRecord(
             (String) row[0],  // id
@@ -235,20 +223,25 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
         );
         
         // Set timestamps
-        if (row[8] != null) {
-            record.setCreatedAt(((java.sql.Timestamp) row[8]).toInstant());
+        if (row[5] != null) {
+            record.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
         }
-        if (row[9] != null) {
-            record.setLastAccessed(((java.sql.Timestamp) row[9]).toInstant());
+        if (row[6] != null) {
+            record.setLastAccessed(((java.sql.Timestamp) row[6]).toInstant());
         }
         
         // Set relevance score
-        if (row[7] != null) {
-            record.setRelevanceScore(((BigDecimal) row[7]).doubleValue());
+        if (row[4] != null) {
+            record.setRelevanceScore(((BigDecimal) row[4]).doubleValue());
+        }
+        
+        // Handle category JSON parsing if needed
+        if (row[3] != null) {
+            // CategoryLabel parsing would go here
         }
         
         // Handle metadata JSON parsing if needed
-        if (row[10] != null) {
+        if (row[7] != null) {
             // Metadata parsing would go here
         }
         
@@ -305,16 +298,16 @@ public class PostgresJpaSimilaritySearchStrategy implements JpaSimilaritySearchS
     @Override
     public boolean validateSchema(EntityManager entityManager) throws Exception {
         try {
-            // Check if memory_entities table exists
+            // Check if memory_records table exists
             Query tableCheck = entityManager.createNativeQuery(
-                "SELECT 1 FROM information_schema.tables WHERE table_name = 'memory_entities'");
+                "SELECT 1 FROM information_schema.tables WHERE table_name = 'memory_records'");
             tableCheck.getSingleResult();
             
             // Check if embedding column exists if pgvector is available
             if (pgvectorAvailable) {
                 Query embeddingCheck = entityManager.createNativeQuery(
                     "SELECT 1 FROM information_schema.columns " +
-                    "WHERE table_name = 'memory_entities' AND column_name = 'embedding'");
+                    "WHERE table_name = 'memory_records' AND column_name = 'embedding'");
                 embeddingCheck.getSingleResult();
             }
             

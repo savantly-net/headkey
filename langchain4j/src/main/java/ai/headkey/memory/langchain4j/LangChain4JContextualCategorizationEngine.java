@@ -1,18 +1,29 @@
 package ai.headkey.memory.langchain4j;
 
-import ai.headkey.memory.dto.CategoryLabel;
-import ai.headkey.memory.dto.Metadata;
-import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.V;
-
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
+import ai.headkey.memory.langchain4j.dto.CategoryResponse;
+import ai.headkey.memory.langchain4j.dto.TagResponse;
+import ai.headkey.memory.langchain4j.services.CategoryExtractionService;
+import ai.headkey.memory.langchain4j.services.LangChain4jCategoryExtractionService;
+import ai.headkey.memory.langchain4j.services.LangChain4jTagExtractionService;
+import ai.headkey.memory.langchain4j.services.TagExtractionService;
+import dev.langchain4j.model.chat.ChatModel;
 
 /**
  * LangChain4j implementation of the Contextual Categorization Engine (CCE).
@@ -21,6 +32,13 @@ import java.util.stream.Collectors;
  * of content using Large Language Models. It provides sophisticated understanding
  * of context, semantics, and domain-specific categorization.
  * 
+ * The implementation follows SOLID principles:
+ * - Single Responsibility: Focuses on orchestrating categorization and tag extraction
+ * - Open/Closed: Can be extended with different service implementations
+ * - Liskov Substitution: Can accept any valid service implementations
+ * - Interface Segregation: Depends on focused service interfaces
+ * - Dependency Inversion: Depends on service abstractions, not concrete implementations
+ * 
  * Features:
  * - AI-powered content categorization using LLMs
  * - Semantic tag extraction
@@ -28,12 +46,12 @@ import java.util.stream.Collectors;
  * - Batch processing optimization
  * - Configurable category schemas
  * - Performance metrics and health monitoring
+ * - Pattern-based fallback extraction
  * 
  * @since 1.0
  */
 public class LangChain4JContextualCategorizationEngine implements ContextualCategorizationEngine {
     
-    private final ChatLanguageModel chatModel;
     private final CategoryExtractionService categoryService;
     private final TagExtractionService tagService;
     
@@ -55,124 +73,53 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
     private final Map<String, Double> categoryConfidenceSum = new ConcurrentHashMap<>();
     private final Instant startTime = Instant.now();
     
-    // Entity extraction patterns
+    // Entity extraction patterns for fallback
     private final Pattern emailPattern = Pattern.compile("\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b");
     private final Pattern phonePattern = Pattern.compile("\\b\\d{3}-\\d{3}-\\d{4}\\b|\\b\\(\\d{3}\\)\\s*\\d{3}-\\d{4}\\b");
     private final Pattern urlPattern = Pattern.compile("https?://[\\w\\.-]+\\.[a-zA-Z]{2,}[\\w\\.-]*/?[\\w\\.-?=%&]*");
     private final Pattern datePattern = Pattern.compile("\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b");
     
     /**
-     * AI Service interface for category extraction using LangChain4j.
-     */
-    interface CategoryExtractionService {
-        
-        @UserMessage("""
-            Analyze the following content and categorize it according to the available categories.
-            
-            Content: {{content}}
-            Available Categories: {{categories}}
-            Context Metadata: {{metadata}}
-            
-            Please respond with a JSON object containing:
-            - "primary": the main category from the available categories
-            - "secondary": an optional subcategory (can be null)
-            - "confidence": a confidence score between 0.0 and 1.0
-            - "reasoning": brief explanation for the categorization
-            
-            Example response:
-            {
-              "primary": "UserProfile",
-              "secondary": "Preferences",
-              "confidence": 0.85,
-              "reasoning": "Content describes user preferences for food and activities"
-            }
-            
-            If the content doesn't clearly fit any category, use "Unknown" with appropriate confidence.
-            """)
-        CategoryResponse categorizeContent(@V("content") String content, 
-                                         @V("categories") String categories,
-                                         @V("metadata") String metadata);
-    }
-    
-    /**
-     * AI Service interface for semantic tag extraction.
-     */
-    interface TagExtractionService {
-        
-        @UserMessage("""
-            Extract semantic tags and entities from the following content.
-            Focus on identifying:
-            - Named entities (people, places, organizations)
-            - Key concepts and topics
-            - Temporal expressions
-            - Important keywords
-            - Relationships
-            
-            Content: {{content}}
-            
-            Return a JSON object with:
-            - "tags": array of extracted tags/entities
-            - "entities": object with categorized entities (person, place, organization, etc.)
-            
-            Example response:
-            {
-              "tags": ["John Doe", "software engineer", "Python", "San Francisco"],
-              "entities": {
-                "person": ["John Doe"],
-                "profession": ["software engineer"],
-                "technology": ["Python"],
-                "location": ["San Francisco"]
-              }
-            }
-            """)
-        TagResponse extractTags(@V("content") String content);
-    }
-    
-    /**
-     * Response object for categorization results.
-     */
-    public static class CategoryResponse {
-        public String primary;
-        public String secondary;
-        public double confidence;
-        public String reasoning;
-    }
-    
-    /**
-     * Response object for tag extraction results.
-     */
-    public static class TagResponse {
-        public List<String> tags = new ArrayList<>();
-        public Map<String, List<String>> entities = new HashMap<>();
-    }
-    
-    /**
-     * Constructor that accepts a LangChain4j ChatLanguageModel.
+     * Constructor with dependency injection of services.
      * 
-     * @param chatModel The chat model to use for AI operations
+     * @param categoryService The category extraction service
+     * @param tagService The tag extraction service
      */
-    public LangChain4JContextualCategorizationEngine(ChatLanguageModel chatModel) {
-        this.chatModel = Objects.requireNonNull(chatModel, "ChatLanguageModel cannot be null");
-        this.categoryService = AiServices.create(CategoryExtractionService.class, chatModel);
-        this.tagService = AiServices.create(TagExtractionService.class, chatModel);
+    public LangChain4JContextualCategorizationEngine(CategoryExtractionService categoryService, 
+                                                     TagExtractionService tagService) {
+        this.categoryService = Objects.requireNonNull(categoryService, "CategoryExtractionService cannot be null");
+        this.tagService = Objects.requireNonNull(tagService, "TagExtractionService cannot be null");
         
         initializeSubcategories();
     }
     
     /**
-     * Initialize default subcategories for each primary category.
+     * Convenience constructor that accepts a LangChain4j ChatLanguageModel.
+     * Creates the default service implementations.
+     * 
+     * @param chatModel The chat model to use for AI operations
+     */
+    public LangChain4JContextualCategorizationEngine(ChatModel chatModel) {
+        this(
+            new LangChain4jCategoryExtractionService(chatModel),
+            new LangChain4jTagExtractionService(chatModel)
+        );
+    }
+    
+    /**
+     * Initialize subcategories for the default categories.
      */
     private void initializeSubcategories() {
-        categorySubcategories.put("UserProfile", Set.of("Biography", "Preferences", "Skills", "Contacts"));
-        categorySubcategories.put("WorldFact", Set.of("Geography", "History", "Science", "Culture"));
-        categorySubcategories.put("PersonalData", Set.of("Identity", "Health", "Financial", "Family"));
-        categorySubcategories.put("BusinessRule", Set.of("Policy", "Process", "Regulation", "Standard"));
-        categorySubcategories.put("TechnicalKnowledge", Set.of("Programming", "Architecture", "Tools", "Documentation"));
-        categorySubcategories.put("EmotionalState", Set.of("Mood", "Feeling", "Reaction", "Sentiment"));
-        categorySubcategories.put("Preference", Set.of("Likes", "Dislikes", "Priorities", "Values"));
+        categorySubcategories.put("UserProfile", Set.of("Demographics", "Preferences", "Skills", "Interests"));
+        categorySubcategories.put("WorldFact", Set.of("Science", "History", "Geography", "Current Events"));
+        categorySubcategories.put("PersonalData", Set.of("Contact", "Identity", "Financial", "Health"));
+        categorySubcategories.put("BusinessRule", Set.of("Policy", "Procedure", "Regulation", "Standard"));
+        categorySubcategories.put("TechnicalKnowledge", Set.of("Programming", "Architecture", "Tools", "Frameworks"));
+        categorySubcategories.put("EmotionalState", Set.of("Mood", "Feelings", "Reactions", "Sentiments"));
+        categorySubcategories.put("Preference", Set.of("Likes", "Dislikes", "Choices", "Priorities"));
         categorySubcategories.put("Goal", Set.of("Short-term", "Long-term", "Personal", "Professional"));
-        categorySubcategories.put("Memory", Set.of("Event", "Experience", "Learning", "Association"));
-        categorySubcategories.put("Communication", Set.of("Message", "Meeting", "Call", "Email"));
+        categorySubcategories.put("Memory", Set.of("Episodic", "Semantic", "Procedural", "Working"));
+        categorySubcategories.put("Communication", Set.of("Message", "Request", "Response", "Notification"));
     }
     
     @Override
@@ -184,29 +131,28 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
         try {
             totalCategorizations++;
             
-            String categories = String.join(", ", availableCategories);
-            String metadata = meta != null ? meta.toString() : "No metadata provided";
+            // Prepare context metadata
+            String metadataJson = prepareMetadataJson(meta);
+            String availableCategoriesStr = String.join(", ", availableCategories);
             
-            CategoryResponse response = categoryService.categorizeContent(content, categories, metadata);
+            // Get categorization from AI service
+            CategoryResponse response = categoryService.categorizeContent(content, availableCategoriesStr, metadataJson);
             
-            // Validate and sanitize the response
-            String primaryCategory = validateCategory(response.primary);
-            String secondaryCategory = validateSubcategory(primaryCategory, response.secondary);
-            double confidence = Math.max(0.0, Math.min(1.0, response.confidence));
-            
-            // Extract additional tags
+            // Extract tags using tag service
             Set<String> tags = extractTags(content);
             
-            // Create the category label
-            CategoryLabel label = new CategoryLabel(primaryCategory, secondaryCategory, tags, confidence);
+            // Validate and process the response
+            String primaryCategory = validateCategory(response.getPrimary());
+            String secondaryCategory = validateSubcategory(primaryCategory, response.getSecondary());
+            double confidence = Math.max(0.0, Math.min(1.0, response.getConfidence()));
             
             // Update statistics
             updateStatistics(primaryCategory, confidence);
             
-            return label;
+            return new CategoryLabel(primaryCategory, secondaryCategory, tags, confidence);
             
         } catch (Exception e) {
-            // Fallback to basic categorization on AI service failure
+            // Fallback to pattern-based categorization
             return createFallbackCategory(content, meta);
         }
     }
@@ -223,9 +169,9 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
             Set<String> allTags = new LinkedHashSet<>();
             
             // Extract tags using AI service
-            TagResponse response = tagService.extractTags(content);
-            if (response.tags != null) {
-                allTags.addAll(response.tags);
+            TagResponse tagResponse = tagService.extractTags(content);
+            if (tagResponse.getTags() != null) {
+                allTags.addAll(tagResponse.getTags());
             }
             
             // Add pattern-based entity extraction as backup
@@ -357,22 +303,25 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
         for (Map.Entry<String, Long> entry : categoryFrequency.entrySet()) {
             String category = entry.getKey();
             long count = entry.getValue();
-            double avgConfidence = categoryConfidenceSum.getOrDefault(category, 0.0) / count;
+            double avgConfidence = count > 0 ? categoryConfidenceSum.getOrDefault(category, 0.0) / count : 0.0;
             
             Map<String, Object> catStat = new HashMap<>();
             catStat.put("count", count);
             catStat.put("averageConfidence", avgConfidence);
-            catStat.put("percentage", (double) count / totalCategorizations * 100);
+            catStat.put("percentage", totalCategorizations > 0 ? (double) count / totalCategorizations * 100 : 0.0);
             
             categoryStats.put(category, catStat);
         }
         stats.put("categoryDistribution", categoryStats);
         
-        // Model information
-        Map<String, Object> modelInfo = new HashMap<>();
-        modelInfo.put("modelClass", chatModel.getClass().getSimpleName());
-        modelInfo.put("healthy", isHealthy());
-        stats.put("model", modelInfo);
+        // Service information
+        Map<String, Object> serviceInfo = new HashMap<>();
+        serviceInfo.put("categoryService", categoryService.getServiceName());
+        serviceInfo.put("tagService", tagService.getServiceName());
+        serviceInfo.put("categoryServiceHealthy", categoryService.isHealthy());
+        serviceInfo.put("tagServiceHealthy", tagService.isHealthy());
+        serviceInfo.put("healthy", isHealthy());
+        stats.put("services", serviceInfo);
         
         return stats;
     }
@@ -380,13 +329,11 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
     @Override
     public boolean isHealthy() {
         try {
-            // Test the AI service with a simple categorization
-            CategoryResponse response = categoryService.categorizeContent(
-                "Test content for health check", 
-                String.join(", ", availableCategories),
-                "Health check metadata"
-            );
-            return response != null && response.primary != null;
+            // Test both services
+            boolean categoryServiceHealthy = categoryService.isHealthy();
+            boolean tagServiceHealthy = tagService.isHealthy();
+            
+            return categoryServiceHealthy && tagServiceHealthy;
         } catch (Exception e) {
             return false;
         }
@@ -460,22 +407,65 @@ public class LangChain4JContextualCategorizationEngine implements ContextualCate
     }
     
     /**
+     * Prepares metadata for JSON serialization.
+     */
+    private String prepareMetadataJson(Metadata meta) {
+        if (meta == null) {
+            return "{}";
+        }
+        
+        // Simple JSON construction for metadata
+        // TODO: Use proper JSON library for complex metadata
+        Map<String, Object> metaMap = meta.getProperties();
+        if (metaMap.isEmpty()) {
+            return "{}";
+        }
+        
+        StringBuilder json = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : metaMap.entrySet()) {
+            if (!first) {
+                json.append(", ");
+            }
+            json.append("\"").append(entry.getKey()).append("\": \"")
+                .append(entry.getValue().toString()).append("\"");
+            first = false;
+        }
+        json.append("}");
+        
+        return json.toString();
+    }
+    
+    /**
      * Adds a custom category to the available categories.
      * 
      * @param category The category to add
      * @param subcategories Optional subcategories for the new category
      */
     public void addCustomCategory(String category, Set<String> subcategories) {
-        availableCategories.add(category);
-        if (subcategories != null && !subcategories.isEmpty()) {
-            categorySubcategories.put(category, new HashSet<>(subcategories));
+        if (category != null && !category.trim().isEmpty()) {
+            availableCategories.add(category);
+            if (subcategories != null && !subcategories.isEmpty()) {
+                categorySubcategories.put(category, new HashSet<>(subcategories));
+            }
         }
     }
     
     /**
-     * Gets the underlying ChatLanguageModel for advanced configuration.
+     * Gets the category extraction service.
+     * 
+     * @return The category extraction service
      */
-    public ChatLanguageModel getChatModel() {
-        return chatModel;
+    public CategoryExtractionService getCategoryService() {
+        return categoryService;
+    }
+    
+    /**
+     * Gets the tag extraction service.
+     * 
+     * @return The tag extraction service
+     */
+    public TagExtractionService getTagService() {
+        return tagService;
     }
 }

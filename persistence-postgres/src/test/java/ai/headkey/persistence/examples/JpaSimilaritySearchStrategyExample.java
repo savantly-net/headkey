@@ -1,17 +1,19 @@
 package ai.headkey.persistence.examples;
 
-import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
-import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
-import ai.headkey.persistence.factory.JpaMemorySystemFactory;
-import ai.headkey.persistence.strategies.jpa.*;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.persistence.factory.JpaMemorySystemFactory;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 /**
  * Example demonstrating the new JPA similarity search strategy system.
@@ -24,6 +26,8 @@ import java.util.Map;
  * 5. Use the builder pattern for complex configurations
  */
 public class JpaSimilaritySearchStrategyExample {
+
+    private static String agentId = "demo-agent";
     
     // Mock embedding generator for demonstration
     private static final AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator = 
@@ -81,7 +85,7 @@ public class JpaSimilaritySearchStrategyExample {
         storeExampleMemories(memorySystem);
         
         // Perform similarity search
-        List<MemoryRecord> results = memorySystem.searchSimilar("machine learning AI", 3);
+        List<MemoryRecord> results = memorySystem.searchSimilar("machine learning AI", 3, agentId);
         System.out.println("\nSearch Results for 'machine learning AI':");
         printSearchResults(results);
         
@@ -106,11 +110,11 @@ public class JpaSimilaritySearchStrategyExample {
         String query = "neural network deep learning";
         
         System.out.println("Vector-based Strategy Results:");
-        List<MemoryRecord> vectorResults = vectorSystem.searchSimilar(query, 3);
+        List<MemoryRecord> vectorResults = vectorSystem.searchSimilar(query, 3, agentId);
         printSearchResults(vectorResults);
         
         System.out.println("Text-based Strategy Results:");
-        List<MemoryRecord> textResults = textSystem.searchSimilar(query, 3);
+        List<MemoryRecord> textResults = textSystem.searchSimilar(query, 3, agentId);
         printSearchResults(textResults);
         
         System.out.println();
@@ -159,7 +163,7 @@ public class JpaSimilaritySearchStrategyExample {
         storeExampleMemories(memorySystem);
         
         // Test with configured threshold
-        List<MemoryRecord> results = memorySystem.searchSimilar("artificial intelligence", 5);
+        List<MemoryRecord> results = memorySystem.searchSimilar("artificial intelligence", 5, agentId);
         System.out.println("\nFiltered Results (threshold: 0.2):");
         printSearchResults(results);
         
@@ -215,7 +219,7 @@ public class JpaSimilaritySearchStrategyExample {
         
         storeExampleMemories(memorySystem);
         
-        List<MemoryRecord> results = memorySystem.searchSimilar("computer science", 3);
+        List<MemoryRecord> results = memorySystem.searchSimilar("computer science", 3, agentId);
         System.out.println("\nCustom Strategy Results:");
         printSearchResults(results);
         
@@ -252,7 +256,7 @@ public class JpaSimilaritySearchStrategyExample {
         
         for (MemoryRecord memory : memories) {
             try {
-                memorySystem.encodeAndStore(memory.getContent(), memory.getCategory(), memory.getMetadata());
+                memorySystem.encodeAndStore(memory.getContent(), memory.getCategory(), memory.getMetadata(), agentId);
             } catch (Exception e) {
                 // Skip if already exists (for demonstration purposes)
             }

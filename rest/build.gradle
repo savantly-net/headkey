@@ -11,7 +11,6 @@ dependencies {
     implementation 'io.quarkus:quarkus-smallrye-openapi'
     implementation 'io.quarkus:quarkus-hibernate-validator'
 
-    implementation 'io.quarkiverse.langchain4j:quarkus-langchain4j-openai:1.0.0'
 
     // JPA and Database dependencies
     implementation 'io.quarkus:quarkus-hibernate-orm'
@@ -19,8 +18,13 @@ dependencies {
     implementation 'io.quarkus:quarkus-jdbc-postgresql'
     implementation 'io.quarkus:quarkus-agroal'
 
+    implementation 'io.quarkiverse.langchain4j:quarkus-langchain4j-openai:1.0.0'
+
     implementation project(':api')
     implementation project(':core')
+    implementation project(':persistence-postgres')
+    implementation project(':langchain4j')
+
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
     testImplementation 'io.quarkus:quarkus-junit5-mockito'

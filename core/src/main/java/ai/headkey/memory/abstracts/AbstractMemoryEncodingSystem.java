@@ -1,17 +1,21 @@
 package ai.headkey.memory.abstracts;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Logger;
+
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
 import ai.headkey.memory.interfaces.MemoryEncodingSystem;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Abstract base class for MemoryEncodingSystem implementations.
@@ -29,6 +33,8 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSystem {
+
+    private static final Logger LOGGER = Logger.getLogger(AbstractMemoryEncodingSystem.class.getName());
     
     // Statistics tracking
     protected final AtomicLong totalOperations = new AtomicLong(0);
@@ -75,7 +81,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
     
     // Template method pattern for encoding and storage
     @Override
-    public final MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta) {
+    public final MemoryRecord encodeAndStore(String content, CategoryLabel category, Metadata meta, String agentId) {
         validateEncodeAndStoreInputs(content, category, meta);
         
         try {
@@ -88,7 +94,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             }
             
             // Delegate to concrete implementation
-            return doEncodeAndStore(content, category, meta, embedding);
+            return doEncodeAndStore(content, category, meta, agentId, embedding);
             
         } catch (Exception e) {
             // Log the original exception for debugging
@@ -144,6 +150,9 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             
             return doUpdateMemory(memoryRecord, embedding);
             
+        } catch (MemoryNotFoundException e) {
+            System.err.println("Memory not found for update: " + memoryRecord.getId());
+            throw e; // Re-throw specific exception
         } catch (Exception e) {
             System.err.println("Detailed error in updateMemory for ID " + memoryRecord.getId() + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
             throw new StorageException("Failed to update memory: " + memoryRecord.getId() + " - " + e.getMessage(), e);
@@ -177,7 +186,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
     }
     
     @Override
-    public final List<MemoryRecord> searchSimilar(String queryContent, int limit) {
+    public final List<MemoryRecord> searchSimilar(String queryContent, int limit, String agentId) {
         validateSearchInputs(queryContent, limit);
         
         try {
@@ -189,7 +198,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
                 queryEmbedding = embeddingGenerator.generateEmbedding(queryContent);
             }
             
-            List<MemoryRecord> results = doSearchSimilar(queryContent, queryEmbedding, limit);
+            List<MemoryRecord> results = doSearchSimilar(queryContent, queryEmbedding, limit, agentId);
             results.forEach(this::updateAccessStatistics);
             return results;
             
@@ -211,7 +220,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
      * @return The stored MemoryRecord
      */
     protected abstract MemoryRecord doEncodeAndStore(String content, CategoryLabel category, 
-                                                    Metadata meta, double[] embedding);
+                                                    Metadata meta, String agentId, double[] embedding);
     
     /**
      * Concrete implementation of memory retrieval by ID.
@@ -263,7 +272,7 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
      * @return List of similar memories
      */
     protected abstract List<MemoryRecord> doSearchSimilar(String queryContent, 
-                                                         double[] queryEmbedding, int limit);
+                                                         double[] queryEmbedding, int limit, String agentId);
     
     // Common utility methods
     
@@ -426,9 +435,11 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
             throw new IllegalArgumentException("Content cannot be null or empty");
         }
         if (category == null) {
+            LOGGER.warning("Category cannot be null");
             throw new IllegalArgumentException("Category cannot be null");
         }
         if (meta == null) {
+            LOGGER.warning("Metadata cannot be null");
             throw new IllegalArgumentException("Metadata cannot be null");
         }
     }

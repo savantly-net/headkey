@@ -1,15 +1,20 @@
 package ai.headkey.persistence.examples;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-
-import java.time.Instant;
-import java.util.*;
 
 /**
  * Example demonstrating the usage of JpaMemoryEncodingSystem.
@@ -194,7 +199,7 @@ public class JpaMemorySystemExample {
         
         // Search for AI-related content
         String aiQuery = "artificial intelligence and machine learning algorithms";
-        List<MemoryRecord> aiResults = memorySystem.searchSimilar(aiQuery, 3);
+        List<MemoryRecord> aiResults = memorySystem.searchSimilar(aiQuery, 3, AGENT_ID);
         System.out.println("AI-related search results: " + aiResults.size());
         
         aiResults.forEach(memory -> {
@@ -204,7 +209,7 @@ public class JpaMemorySystemExample {
         
         // Search for learning-related content
         String learningQuery = "learning and training neural networks";
-        List<MemoryRecord> learningResults = memorySystem.searchSimilar(learningQuery, 2);
+        List<MemoryRecord> learningResults = memorySystem.searchSimilar(learningQuery, 2, AGENT_ID);
         System.out.println("\nLearning-related search results: " + learningResults.size());
         
         learningResults.forEach(memory -> {
@@ -214,7 +219,7 @@ public class JpaMemorySystemExample {
         
         // Search for specific technical terms
         String techQuery = "transformer architecture attention mechanism";
-        List<MemoryRecord> techResults = memorySystem.searchSimilar(techQuery, 2);
+        List<MemoryRecord> techResults = memorySystem.searchSimilar(techQuery, 2, AGENT_ID);
         System.out.println("\nTechnical search results: " + techResults.size());
         
         techResults.forEach(memory -> {
@@ -355,7 +360,7 @@ public class JpaMemorySystemExample {
         metadata.setConfidence(0.95);
         
         // Store the memory
-        return memorySystem.encodeAndStore(content, category, metadata);
+        return memorySystem.encodeAndStore(content, category, metadata, AGENT_ID);
     }
     
     /**

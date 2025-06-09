@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+                                 https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <!-- Test persistence unit for PostgreSQL integration tests -->
+    <persistence-unit name="headkey-beliefs-postgres-test" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        
+        <!-- JPA Entity Classes -->
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+        
+        <!-- Shared cache mode disabled for testing isolation -->
+        <shared-cache-mode>NONE</shared-cache-mode>
+        
+        <!-- Validation mode for development -->
+        <validation-mode>AUTO</validation-mode>
+        
+        <properties>
+            <!-- Database connection will be configured programmatically in tests -->
+            
+            <!-- Hibernate PostgreSQL dialect -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
+            
+            <!-- Schema management - validate against test schema -->
+            <property name="hibernate.hbm2ddl.auto" value="validate"/>
+            
+            <!-- SQL logging - disabled for performance, enable for debugging -->
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="false"/>
+            <property name="hibernate.use_sql_comments" value="false"/>
+            
+            <!-- Performance optimizations for testing -->
+            <property name="hibernate.jdbc.batch_size" value="25"/>
+            <property name="hibernate.jdbc.fetch_size" value="50"/>
+            <property name="hibernate.order_inserts" value="true"/>
+            <property name="hibernate.order_updates" value="true"/>
+            <property name="hibernate.jdbc.batch_versioned_data" value="true"/>
+            
+            <!-- Statistics disabled for test performance -->
+            <property name="hibernate.generate_statistics" value="false"/>
+            
+            <!-- Cache settings - disabled for test isolation -->
+            <property name="hibernate.cache.use_second_level_cache" value="false"/>
+            <property name="hibernate.cache.use_query_cache" value="false"/>
+            <property name="hibernate.cache.use_minimal_puts" value="false"/>
+            
+            <!-- Connection pool settings -->
+            <property name="hibernate.connection.provider_disables_autocommit" value="true"/>
+            <property name="hibernate.connection.autocommit" value="false"/>
+            
+            <!-- Validation settings -->
+            <property name="hibernate.check_nullability" value="true"/>
+            <property name="hibernate.validator.apply_to_ddl" value="false"/>
+            
+            <!-- Transaction settings -->
+            <property name="hibernate.transaction.coordinator_class" value="jdbc"/>
+            
+            <!-- PostgreSQL specific optimizations -->
+            <property name="hibernate.connection.CharSet" value="utf8"/>
+            <property name="hibernate.connection.characterEncoding" value="utf8"/>
+            <property name="hibernate.connection.useUnicode" value="true"/>
+            
+            <!-- Enable prepared statement caching -->
+            <property name="hibernate.connection.prepStmtCacheSize" value="100"/>
+            <property name="hibernate.connection.prepStmtCacheSqlLimit" value="1024"/>
+            <property name="hibernate.connection.cachePrepStmts" value="true"/>
+            
+            <!-- Identifier generation -->
+            <property name="hibernate.id.new_generator_mappings" value="true"/>
+            <property name="hibernate.id.optimizer.pooled.prefer_lo" value="true"/>
+            
+            <!-- Naming strategy -->
+            <property name="hibernate.physical_naming_strategy" value="org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl"/>
+            <property name="hibernate.implicit_naming_strategy" value="org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl"/>
+            
+            <!-- Schema validation settings -->
+            <property name="hibernate.hbm2ddl.halt_on_error" value="true"/>
+            
+            <!-- JDBC settings for PostgreSQL -->
+            <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
+            
+            <!-- Time zone handling -->
+            <property name="hibernate.jdbc.time_zone" value="UTC"/>
+            
+            <!-- Metadata scanning -->
+            <property name="hibernate.archive.autodetection" value="class"/>
+        </properties>
+    </persistence-unit>
+
+    <!-- H2 persistence unit for fast unit tests -->
+    <persistence-unit name="headkey-beliefs-h2-test" transaction-type="RESOURCE_LOCAL">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        
+        <!-- JPA Entity Classes -->
+        <class>ai.headkey.persistence.entities.BeliefEntity</class>
+        <class>ai.headkey.persistence.entities.BeliefConflictEntity</class>
+        <class>ai.headkey.persistence.entities.MemoryEntity</class>
+        
+        <!-- Exclude unlisted classes -->
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+        
+        <!-- Shared cache mode disabled for testing isolation -->
+        <shared-cache-mode>NONE</shared-cache-mode>
+        
+        <properties>
+            <!-- H2 in-memory database for fast unit tests -->
+            <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
+            <property name="jakarta.persistence.jdbc.url" value="jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL"/>
+            <property name="jakarta.persistence.jdbc.user" value="sa"/>
+            <property name="jakarta.persistence.jdbc.password" value=""/>
+            
+            <!-- H2 dialect with PostgreSQL compatibility -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+            
+            <!-- Auto-create schema for H2 tests -->
+            <property name="hibernate.hbm2ddl.auto" value="create-drop"/>
+            
+            <!-- SQL logging disabled for performance -->
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="false"/>
+            
+            <!-- Fast test execution settings -->
+            <property name="hibernate.jdbc.batch_size" value="50"/>
+            <property name="hibernate.order_inserts" value="true"/>
+            <property name="hibernate.order_updates" value="true"/>
+            
+            <!-- Disable features not needed for unit tests -->
+            <property name="hibernate.generate_statistics" value="false"/>
+            <property name="hibernate.cache.use_second_level_cache" value="false"/>
+            <property name="hibernate.cache.use_query_cache" value="false"/>
+            
+            <!-- H2 specific settings -->
+            <property name="hibernate.connection.autocommit" value="false"/>
+            <property name="hibernate.connection.provider_disables_autocommit" value="true"/>
+        </properties>
+    </persistence-unit>
+
+</persistence>

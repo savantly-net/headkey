@@ -1,9 +1,6 @@
 -- Test database initialization script for HeadKey Belief Storage
 -- This script creates the necessary tables and indexes for testing
 
--- Enable UUID extension if needed
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Drop tables if they exist (for clean test runs)
 DROP TABLE IF EXISTS belief_tags CASCADE;
 DROP TABLE IF EXISTS belief_evidence_memories CASCADE;
@@ -75,7 +72,6 @@ CREATE INDEX idx_belief_active ON beliefs(active);
 CREATE INDEX idx_belief_created_at ON beliefs(created_at);
 CREATE INDEX idx_belief_agent_category ON beliefs(agent_id, category);
 CREATE INDEX idx_belief_agent_active ON beliefs(agent_id, active);
-CREATE INDEX idx_belief_statement_gin ON beliefs USING gin(to_tsvector('english', statement));
 
 -- Evidence memories indexes
 CREATE INDEX idx_evidence_belief_id ON belief_evidence_memories(belief_id);
@@ -133,33 +129,3 @@ INSERT INTO belief_tags (belief_id, tag) VALUES
 ('test-belief-1', 'test-tag'),
 ('test-belief-2', 'test-tag'),
 ('test-belief-3', 'another-tag');
-
--- Grant necessary permissions (for test user)
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO test_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO test_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO test_user;
-
--- Analyze tables for better query planning
-ANALYZE beliefs;
-ANALYZE belief_evidence_memories;
-ANALYZE belief_tags;
-ANALYZE belief_conflicts;
-ANALYZE conflict_belief_ids;
-
--- Display table information
-SELECT 
-    schemaname,
-    tablename,
-    attname as column_name,
-    typname as data_type,
-    attnotnull as not_null
-FROM pg_attribute 
-JOIN pg_class ON pg_attribute.attrelid = pg_class.oid 
-JOIN pg_type ON pg_attribute.atttypid = pg_type.oid 
-JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid 
-WHERE 
-    schemaname = 'public' 
-    AND tablename IN ('beliefs', 'belief_conflicts', 'belief_evidence_memories', 'belief_tags', 'conflict_belief_ids')
-    AND attnum > 0 
-    AND NOT attisdropped
-ORDER BY tablename, attnum;

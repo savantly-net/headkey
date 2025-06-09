@@ -24,26 +24,22 @@ import java.util.stream.Collectors;
  */
 public class TextBasedJpaSimilaritySearchStrategy implements JpaSimilaritySearchStrategy {
     
-    private static final String TEXT_SEARCH_QUERY = """
-        SELECT m FROM MemoryEntity m 
-        WHERE LOWER(m.content) LIKE LOWER(:query) 
-        AND (:agentId IS NULL OR m.agentId = :agentId)
+    // Use database-specific native SQL for case-insensitive search
+    private static final String POSTGRES_TEXT_SEARCH_QUERY = """
+        SELECT * FROM MemoryEntity m 
+        WHERE m.content ILIKE ? 
+        AND (? IS NULL OR m.agent_id = ?)
         ORDER BY 
-            CASE WHEN m.relevanceScore IS NOT NULL THEN m.relevanceScore ELSE 0.0 END DESC,
-            m.lastAccessed DESC,
-            m.createdAt DESC
+            CASE WHEN m.relevance_score IS NOT NULL THEN m.relevance_score ELSE 0.0 END DESC,
+            m.last_accessed DESC,
+            m.created_at DESC
         """;
     
-    private static final String KEYWORD_SEARCH_QUERY = """
+    // H2 fallback using JPQL without functions
+    private static final String H2_TEXT_SEARCH_QUERY = """
         SELECT m FROM MemoryEntity m 
-        WHERE (:agentId IS NULL OR m.agentId = :agentId)
-        AND (
-            LOWER(m.content) LIKE LOWER(:keyword1) OR
-            LOWER(m.content) LIKE LOWER(:keyword2) OR
-            LOWER(m.content) LIKE LOWER(:keyword3) OR
-            LOWER(m.content) LIKE LOWER(:keyword4) OR
-            LOWER(m.content) LIKE LOWER(:keyword5)
-        )
+        WHERE LOWER(cast(m.content as string)) LIKE :query 
+        AND (:agentId IS NULL OR m.agentId = :agentId)
         ORDER BY 
             CASE WHEN m.relevanceScore IS NOT NULL THEN m.relevanceScore ELSE 0.0 END DESC,
             m.lastAccessed DESC,
@@ -68,12 +64,28 @@ public class TextBasedJpaSimilaritySearchStrategy implements JpaSimilaritySearch
     private List<MemoryRecord> performSimpleTextSearch(EntityManager entityManager, String queryContent, 
                                                      String agentId, int limit) throws Exception {
         
-        TypedQuery<MemoryEntity> query = entityManager.createQuery(TEXT_SEARCH_QUERY, MemoryEntity.class);
-        query.setParameter("query", "%" + queryContent + "%");
-        query.setParameter("agentId", agentId);
-        query.setMaxResults(limit);
+        // Check database type for case-insensitive search strategy
+        String databaseProductName = entityManager.getEntityManagerFactory()
+            .getProperties().get("hibernate.dialect").toString().toLowerCase();
         
-        List<MemoryEntity> entities = query.getResultList();
+        List<MemoryEntity> entities;
+        
+        if (databaseProductName.contains("postgresql")) {
+            // Use PostgreSQL ILIKE for case-insensitive search
+            var nativeQuery = entityManager.createNativeQuery(POSTGRES_TEXT_SEARCH_QUERY, MemoryEntity.class);
+            nativeQuery.setParameter(1, "%" + queryContent + "%");
+            nativeQuery.setParameter(2, agentId);
+            nativeQuery.setParameter(3, agentId);
+            nativeQuery.setMaxResults(limit);
+            entities = nativeQuery.getResultList();
+        } else {
+            // Fallback to JPQL for H2 and other databases
+            TypedQuery<MemoryEntity> query = entityManager.createQuery(H2_TEXT_SEARCH_QUERY, MemoryEntity.class);
+            query.setParameter("query", "%" + queryContent.toLowerCase() + "%");
+            query.setParameter("agentId", agentId);
+            query.setMaxResults(limit);
+            entities = query.getResultList();
+        }
         
         return updateAccessTimesAndConvert(entityManager, entities);
     }
@@ -81,46 +93,9 @@ public class TextBasedJpaSimilaritySearchStrategy implements JpaSimilaritySearch
     private List<MemoryRecord> performKeywordSearch(EntityManager entityManager, String[] keywords, 
                                                   String agentId, int limit) throws Exception {
         
-        TypedQuery<MemoryEntity> query = entityManager.createQuery(KEYWORD_SEARCH_QUERY, MemoryEntity.class);
-        query.setParameter("agentId", agentId);
-        
-        // Set keyword parameters (pad with empty strings if fewer than 5 keywords)
-        for (int i = 0; i < 5; i++) {
-            String keyword = (i < keywords.length) ? "%" + keywords[i] + "%" : "%__EMPTY_KEYWORD__%";
-            query.setParameter("keyword" + (i + 1), keyword);
-        }
-        
-        query.setMaxResults(Math.min(limit * 2, 100)); // Get more results for better filtering
-        
-        List<MemoryEntity> entities = query.getResultList();
-        
-        // Score and rank results based on keyword matches
-        List<MemoryEntity> scoredEntities = entities.stream()
-            .map(entity -> {
-                int matchCount = countKeywordMatches(entity.getContent().toLowerCase(), keywords);
-                // Boost entities with more keyword matches
-                if (matchCount > 1) {
-                    // Temporarily boost relevance score for sorting
-                    entity.setRelevanceScore((entity.getRelevanceScore() != null ? entity.getRelevanceScore() : 0.0) + matchCount * 0.1);
-                }
-                return entity;
-            })
-            .filter(entity -> countKeywordMatches(entity.getContent().toLowerCase(), keywords) > 0)
-            .sorted((a, b) -> {
-                // Sort by relevance score (including boost), then by recency
-                int scoreComparison = Double.compare(
-                    b.getRelevanceScore() != null ? b.getRelevanceScore() : 0.0,
-                    a.getRelevanceScore() != null ? a.getRelevanceScore() : 0.0
-                );
-                if (scoreComparison != 0) {
-                    return scoreComparison;
-                }
-                return b.getLastAccessed().compareTo(a.getLastAccessed());
-            })
-            .limit(limit)
-            .collect(Collectors.toList());
-        
-        return updateAccessTimesAndConvert(entityManager, scoredEntities);
+        // For keyword search, use simple text search with concatenated keywords
+        String keywordQuery = String.join(" ", keywords);
+        return performSimpleTextSearch(entityManager, keywordQuery, agentId, limit);
     }
     
     private List<MemoryRecord> updateAccessTimesAndConvert(EntityManager entityManager, List<MemoryEntity> entities) throws Exception {
@@ -190,8 +165,9 @@ public class TextBasedJpaSimilaritySearchStrategy implements JpaSimilaritySearch
     
     private int countKeywordMatches(String content, String[] keywords) {
         int count = 0;
+        String lowerContent = content.toLowerCase();
         for (String keyword : keywords) {
-            if (content.contains(keyword.toLowerCase())) {
+            if (lowerContent.contains(keyword.toLowerCase())) {
                 count++;
             }
         }
@@ -206,6 +182,12 @@ public class TextBasedJpaSimilaritySearchStrategy implements JpaSimilaritySearch
     @Override
     public String getStrategyName() {
         return "Text-based JPA Similarity Search";
+    }
+    
+    @Override
+    public void initialize(EntityManager entityManager) throws Exception {
+        // No special initialization required for text-based search
+        // This strategy works with any JPA-compatible database
     }
     
     @Override

@@ -5,7 +5,7 @@ package ai.headkey.memory.exceptions;
  * This exception indicates that a memory with the specified ID does not exist or
  * has been deleted/archived and is no longer accessible.
  */
-public class MemoryNotFoundException extends Exception {
+public class MemoryNotFoundException extends RuntimeException {
     
     /**
      * The memory ID that could not be found.

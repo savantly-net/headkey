@@ -86,7 +86,7 @@ public class PostgreSQLBeliefAnalyzerExample {
             BeliefUpdateResult result = analyzer.analyzeNewMemory(memory);
             
             System.out.println("Analyzed memory: " + memory.getContent());
-            System.out.println("Beliefs created: " + result.getCreatedBeliefs().size());
+            System.out.println("Beliefs created: " + result.getNewBeliefs().size());
             System.out.println("Storage service healthy: " + postgresStorage.isHealthy());
             
             // Verify persistence
@@ -174,9 +174,9 @@ public class PostgreSQLBeliefAnalyzerExample {
                 BeliefUpdateResult result = analyzer.analyzeNewMemory(memory);
                 
                 System.out.println("  Memory: " + content);
-                System.out.println("    Created beliefs: " + result.getCreatedBeliefs().size());
+                System.out.println("    Created beliefs: " + result.getNewBeliefs().size());
                 System.out.println("    Reinforced beliefs: " + result.getReinforcedBeliefs().size());
-                System.out.println("    Conflicts detected: " + result.getDetectedConflicts().size());
+                System.out.println("    Conflicts detected: " + result.getConflicts().size());
             }
             
             // Step 2: Query persisted beliefs

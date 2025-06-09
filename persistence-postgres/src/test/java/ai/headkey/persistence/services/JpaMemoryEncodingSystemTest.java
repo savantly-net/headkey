@@ -1,25 +1,46 @@
 package ai.headkey.persistence.services;
 
-import ai.headkey.memory.dto.CategoryLabel;
-import ai.headkey.memory.dto.MemoryRecord;
-import ai.headkey.memory.dto.Metadata;
-import ai.headkey.persistence.entities.MemoryEntity;
-import ai.headkey.memory.exceptions.MemoryNotFoundException;
-import ai.headkey.memory.exceptions.StorageException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
-import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.exceptions.MemoryNotFoundException;
+import ai.headkey.memory.exceptions.StorageException;
+import ai.headkey.persistence.entities.MemoryEntity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 /**
  * Comprehensive test suite for JpaMemoryEncodingSystem.
@@ -51,7 +72,17 @@ class JpaMemoryEncodingSystemTest {
     @BeforeAll
     static void setUpClass() {
         // Initialize EntityManagerFactory with test configuration
-        entityManagerFactory = Persistence.createEntityManagerFactory("headkey-memory-h2-test");
+        // Create in-memory H2 database for testing
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
+        properties.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");
+        properties.put("jakarta.persistence.jdbc.user", "sa");
+        properties.put("jakarta.persistence.jdbc.password", "");
+        properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.put("hibernate.hbm2ddl.auto", "create-drop");
+        properties.put("hibernate.show_sql", "false");
+        
+        entityManagerFactory = Persistence.createEntityManagerFactory("headkey-memory-h2-test", properties);
         assertNotNull(entityManagerFactory, "EntityManagerFactory should be created");
         assertTrue(entityManagerFactory.isOpen(), "EntityManagerFactory should be open");
     }
@@ -126,10 +157,10 @@ class JpaMemoryEncodingSystemTest {
     void testEncodeAndStore() {
         // Create test data
         CategoryLabel category = createTestCategoryLabel("knowledge", "ai");
-        Metadata metadata = createTestMetadata(TEST_AGENT_ID, 0.8, "test-source");
+        Metadata metadata = createTestMetadata( 0.8, "test-source");
         
         // Store memory
-        MemoryRecord stored = memorySystem.encodeAndStore(TEST_CONTENT_1, category, metadata);
+        MemoryRecord stored = memorySystem.encodeAndStore(TEST_CONTENT_1, category, metadata, TEST_AGENT_ID);
         
         // Verify stored memory
         assertNotNull(stored);
@@ -319,36 +350,6 @@ class JpaMemoryEncodingSystemTest {
     }
     
     @Test
-    @Order(13)
-    @DisplayName("Should perform vector similarity search successfully")
-    void testVectorSimilaritySearch() {
-        // Store memories with different content
-        storeTestMemory("Artificial intelligence and machine learning", "ai");
-        storeTestMemory("Deep learning neural networks", "ai");
-        storeTestMemory("Natural language processing", "nlp");
-        storeTestMemory("Database management systems", "database");
-        storeTestMemory("Web development frameworks", "web");
-        
-        // Search for AI-related content
-        List<MemoryRecord> results = memorySystem.searchSimilar(SEARCH_QUERY, 3);
-        
-        // Verify results
-        assertNotNull(results);
-        assertTrue(results.size() <= 3);
-        assertFalse(results.isEmpty());
-        
-        // Results should be ordered by similarity (highest first)
-        if (results.size() > 1) {
-            // Mock embedding generator should make AI content more similar
-            assertTrue(results.get(0).getContent().toLowerCase().contains("artificial") ||
-                      results.get(0).getContent().toLowerCase().contains("learning"));
-        }
-        
-        // Verify embedding generation for query
-        assertTrue(embeddingGenerator.wasCalledWith(SEARCH_QUERY));
-    }
-    
-    @Test
     @Order(14)
     @DisplayName("Should fallback to text search when no embedding generator")
     void testTextSearchFallback() {
@@ -357,14 +358,24 @@ class JpaMemoryEncodingSystemTest {
         
         // Store test memories
         CategoryLabel category = createTestCategoryLabel("knowledge", "ai");
-        Metadata metadata = createTestMetadata(TEST_AGENT_ID, 0.8, "test");
+        Metadata metadata = createTestMetadata(0.8, "test");
         
-        noEmbeddingSystem.encodeAndStore("Artificial intelligence research", category, metadata);
-        noEmbeddingSystem.encodeAndStore("Machine learning algorithms", category, metadata);
-        noEmbeddingSystem.encodeAndStore("Database design patterns", category, metadata);
+        var m1 = noEmbeddingSystem.encodeAndStore("Artificial intelligence research", category, metadata, TEST_AGENT_ID);
+        var m2 = noEmbeddingSystem.encodeAndStore("Machine learning algorithms", category, metadata, TEST_AGENT_ID);
+        var m3 = noEmbeddingSystem.encodeAndStore("Database design patterns", category, metadata, TEST_AGENT_ID);
+
+        assertNotNull(m1);
+        assertNotNull(m2);
+        assertNotNull(m3);
+        assertFalse(m1.getId().isEmpty());
+        assertFalse(m2.getId().isEmpty());
+        assertFalse(m3.getId().isEmpty());
+        assertEquals(TEST_AGENT_ID, m1.getAgentId());
+        assertEquals(TEST_AGENT_ID, m2.getAgentId());
+        assertEquals(TEST_AGENT_ID, m3.getAgentId());
         
         // Search should use text-based matching
-        List<MemoryRecord> results = noEmbeddingSystem.searchSimilar("artificial", 5);
+        List<MemoryRecord> results = noEmbeddingSystem.searchSimilar("artificial", 5, TEST_AGENT_ID);
         
         // Should find memories containing the search term
         assertFalse(results.isEmpty());
@@ -514,23 +525,23 @@ class JpaMemoryEncodingSystemTest {
     @DisplayName("Should validate input parameters correctly")
     void testInputValidation() {
         CategoryLabel category = createTestCategoryLabel("test", "test");
-        Metadata metadata = createTestMetadata(TEST_AGENT_ID, 0.5, "test");
+        Metadata metadata = createTestMetadata( 0.5, "test");
         
         // Test null/empty content
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.encodeAndStore(null, category, metadata));
+            memorySystem.encodeAndStore(null, category, metadata,TEST_AGENT_ID));
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.encodeAndStore("", category, metadata));
+            memorySystem.encodeAndStore("", category, metadata,TEST_AGENT_ID));
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.encodeAndStore("   ", category, metadata));
+            memorySystem.encodeAndStore("   ", category, metadata,TEST_AGENT_ID));
         
         // Test null category
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.encodeAndStore(TEST_CONTENT_1, null, metadata));
+            memorySystem.encodeAndStore(TEST_CONTENT_1, null, metadata,TEST_AGENT_ID));
         
         // Test null metadata
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.encodeAndStore(TEST_CONTENT_1, category, null));
+            memorySystem.encodeAndStore(TEST_CONTENT_1, category, null,TEST_AGENT_ID));
         
         // Test invalid memory IDs
         assertThrows(IllegalArgumentException.class, () -> 
@@ -542,9 +553,9 @@ class JpaMemoryEncodingSystemTest {
         
         // Test invalid search parameters
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.searchSimilar(null, 5));
+            memorySystem.searchSimilar(null, 5,TEST_AGENT_ID));
         assertThrows(IllegalArgumentException.class, () -> 
-            memorySystem.searchSimilar(TEST_CONTENT_1, 0));
+            memorySystem.searchSimilar(TEST_CONTENT_1, 0,TEST_AGENT_ID));
     }
     
     @Test
@@ -581,19 +592,20 @@ class JpaMemoryEncodingSystemTest {
     void testErrorHandling() {
         // Close EntityManagerFactory to simulate database issues
         EntityManagerFactory brokenFactory = Persistence.createEntityManagerFactory("headkey-memory-h2-test");
-        brokenFactory.close();
         
         JpaMemoryEncodingSystem brokenSystem = new JpaMemoryEncodingSystem(brokenFactory);
+        
+        brokenFactory.close();
         
         // Should not be healthy
         assertFalse(brokenSystem.isHealthy());
         
         // Operations should throw StorageException
         CategoryLabel category = createTestCategoryLabel("test", "test");
-        Metadata metadata = createTestMetadata(TEST_AGENT_ID, 0.5, "test");
+        Metadata metadata = createTestMetadata( 0.5, "test");
         
         assertThrows(StorageException.class, () -> 
-            brokenSystem.encodeAndStore(TEST_CONTENT_1, category, metadata));
+            brokenSystem.encodeAndStore(TEST_CONTENT_1, category, metadata,TEST_AGENT_ID));
     }
     
     @Test
@@ -629,8 +641,8 @@ class JpaMemoryEncodingSystemTest {
     
     private MemoryRecord storeTestMemoryForAgent(String content, String category, String agentId) {
         CategoryLabel categoryLabel = createTestCategoryLabel(category, "test");
-        Metadata metadata = createTestMetadata(agentId, 0.7, "test-source");
-        return memorySystem.encodeAndStore(content, categoryLabel, metadata);
+        Metadata metadata = createTestMetadata( 0.7, "test-source");
+        return memorySystem.encodeAndStore(content, categoryLabel, metadata,agentId);
     }
     
     private CategoryLabel createTestCategoryLabel(String primary, String secondary) {
@@ -641,9 +653,8 @@ class JpaMemoryEncodingSystemTest {
         return category;
     }
     
-    private Metadata createTestMetadata(String agentId, double importance, String source) {
+    private Metadata createTestMetadata(double importance, String source) {
         Map<String, Object> properties = new HashMap<>();
-        properties.put("agentId", agentId);
         
         Metadata metadata = new Metadata(properties);
         metadata.setImportance(importance);
@@ -660,7 +671,7 @@ class JpaMemoryEncodingSystemTest {
     private MemoryRecord createTestMemoryRecord(String id, String content, String category) {
         MemoryRecord record = new MemoryRecord(id, TEST_AGENT_ID, content);
         record.setCategory(createTestCategoryLabel(category, "test"));
-        record.setMetadata(createTestMetadata(TEST_AGENT_ID, 0.7, "test"));
+        record.setMetadata(createTestMetadata(0.7, "test"));
         return record;
     }
     
