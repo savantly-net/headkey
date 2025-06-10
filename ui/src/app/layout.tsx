@@ -4,9 +4,11 @@ import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "HeadKey - AI Memory Management System",
-  description: "Revolutionary AI memory management platform that enables intelligent information retention, categorization, and retrieval for AI agents. Built on the CIBFE architecture.",
-  keywords: "AI memory, memory management, AI agents, cognitive ingestion, belief formation, machine learning, artificial intelligence",
-  authors: [{ name: "HeadKey Team" }],
+  description:
+    "Revolutionary AI memory management platform that enables intelligent information retention, categorization, and retrieval for AI agents. Built on the CIBFE architecture.",
+  keywords:
+    "AI memory, memory management, AI agents, cognitive ingestion, belief formation, machine learning, artificial intelligence",
+  authors: [{ name: "Savantly Team" }, { name: "Jeremy Branham" }],
   robots: "index, follow",
   openGraph: {
     title: "HeadKey - AI Memory Management System",
@@ -23,9 +25,9 @@ export const metadata: Metadata = {
 
 export function generateViewport() {
   return {
-    width: 'device-width',
+    width: "device-width",
     initialScale: 1,
-  }
+  };
 }
 
 export default function RootLayout({
@@ -36,9 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="antialiased bg-gray-50 text-gray-900">
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <main className="min-h-screen">{children}</main>
         <Toaster />
       </body>
     </html>
