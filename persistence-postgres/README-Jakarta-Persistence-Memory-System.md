@@ -59,7 +59,7 @@ The `MemoryEntity` class maps `MemoryRecord` DTOs to database tables:
 The system includes preconfigured persistence units in `persistence.xml`:
 
 - `headkey-memory-postgresql`: Production PostgreSQL setup
-- `headkey-memory-mysql`: Production MySQL setup  
+- `headkey-memory-mysql`: Production MySQL setup
 - `headkey-memory-hsqldb-dev`: Development HSQLDB setup
 - `headkey-memory-h2-test`: Testing H2 setup
 
@@ -151,7 +151,7 @@ MemoryRecord stored = memorySystem.encodeAndStore(
 ```java
 // Search for similar memories
 List<MemoryRecord> similar = memorySystem.searchSimilar(
-    "machine learning algorithms", 
+    "machine learning algorithms",
     5  // limit to 5 results
 );
 
@@ -181,15 +181,15 @@ List<MemoryRecord> oldMemories = memorySystem.getOldMemories(30 * 24 * 3600, "ag
 
 The current implementation uses in-memory similarity calculations after database retrieval. For large datasets, consider:
 
-1. **Database-specific Vector Extensions**: 
+1. **Database-specific Vector Extensions**:
    - PostgreSQL: Use pgvector extension
    - MySQL: Use vector search plugins
-   
-2. **Hybrid Approach**: 
+
+2. **Hybrid Approach**:
    - Pre-filter using metadata/text search
    - Apply vector similarity on smaller result sets
 
-3. **Caching**: 
+3. **Caching**:
    - Enable second-level cache for frequently accessed memories
    - Use application-level caching for embedding computations
 
@@ -214,7 +214,7 @@ props.put("hibernate.hikari.minimumIdle", "5");
 The system uses custom AttributeConverters for complex object storage:
 
 - `CategoryLabelConverter`: Handles CategoryLabel serialization
-- `MetadataConverter`: Handles Metadata serialization  
+- `MetadataConverter`: Handles Metadata serialization
 - `VectorEmbeddingConverter`: Handles vector embedding arrays
 
 ### JSON Configuration
@@ -384,7 +384,7 @@ Compatible with CDI, Spring, and other DI frameworks:
 ```java
 @ApplicationScoped
 public class MemorySystemProducer {
-    
+
     @Produces
     @ApplicationScoped
     public MemoryEncodingSystem createMemorySystem() {
@@ -395,13 +395,6 @@ public class MemorySystemProducer {
 
 ## Future Enhancements
 
-### Planned Features
-
-1. **Native Vector Search**: Integration with database vector extensions
-2. **Distributed Caching**: Redis/Hazelcast integration
-3. **Async Operations**: Non-blocking I/O for high-throughput scenarios
-4. **Schema Versioning**: Automatic migration support
-5. **Multi-tenancy**: Tenant isolation strategies
 
 ### Extension Points
 

@@ -540,10 +540,7 @@ quarkus.langchain4j.openai.log-requests=true
 ## 📚 Key Documentation Files
 
 - `SPECIFICATION.md` - Complete system specification
-- `PHASE2_IMPLEMENTATION_SUMMARY.md` - Implementation status
-- `REST_REFACTORING_SUMMARY.md` - JPA integration details
-- `SIMILARITY_SEARCH_REFACTORING.md` - Strategy pattern implementation
-- `LANGCHAIN4J_IMPLEMENTATION.md` - AI embedding integration
+- `rest/LANGCHAIN4J_IMPLEMENTATION.md` - AI embedding integration
 - `rest/README.md` - REST API comprehensive guide
 
 ## 🎯 Success Metrics
