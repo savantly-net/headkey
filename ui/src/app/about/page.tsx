@@ -1,15 +1,15 @@
 "use client";
 
-import { 
-  UserGroupIcon, 
+import {
+  UserGroupIcon,
   GlobeAltIcon,
   LightBulbIcon,
   ShieldCheckIcon,
-  BoltIcon
-} from '@heroicons/react/24/outline';
-import { BrainCircuitIcon } from 'lucide-react';
-import ContactCTA from '@/components/ContactCTA';
-import Link from 'next/link';
+  BoltIcon,
+} from "@heroicons/react/24/outline";
+import { BrainCircuitIcon } from "lucide-react";
+import ContactCTA from "@/components/ContactCTA";
+import Link from "next/link";
 
 const values = [
   {
@@ -46,32 +46,33 @@ const values = [
   },
 ];
 
-const team = [
-  {
-    name: "Dr. Sarah Chen",
-    role: "CEO & Co-Founder",
-    bio: "Former AI Research Lead at Google DeepMind. PhD in Cognitive Science from MIT.",
-    image: "/team/sarah.jpg",
-  },
-  {
-    name: "Michael Rodriguez",
-    role: "CTO & Co-Founder",
-    bio: "Ex-Principal Engineer at OpenAI. Expert in distributed systems and neural architectures.",
-    image: "/team/michael.jpg",
-  },
-  {
-    name: "Dr. Emily Watson",
-    role: "Head of Research",
-    bio: "Leading researcher in memory systems and cognitive architectures. PhD from Stanford.",
-    image: "/team/emily.jpg",
-  },
-  {
-    name: "David Kim",
-    role: "VP of Engineering",
-    bio: "Former Engineering Manager at Anthropic. Specialist in scalable AI infrastructure.",
-    image: "/team/david.jpg",
-  },
-];
+const team: Array<{ name: string; role: string; bio: string; image: string }> =
+  [
+    // {
+    //   name: "Dr. Sarah Chen",
+    //   role: "CEO & Co-Founder",
+    //   bio: "Former AI Research Lead at Google DeepMind. PhD in Cognitive Science from MIT.",
+    //   image: "/team/sarah.jpg",
+    // },
+    // {
+    //   name: "Michael Rodriguez",
+    //   role: "CTO & Co-Founder",
+    //   bio: "Ex-Principal Engineer at OpenAI. Expert in distributed systems and neural architectures.",
+    //   image: "/team/michael.jpg",
+    // },
+    // {
+    //   name: "Dr. Emily Watson",
+    //   role: "Head of Research",
+    //   bio: "Leading researcher in memory systems and cognitive architectures. PhD from Stanford.",
+    //   image: "/team/emily.jpg",
+    // },
+    // {
+    //   name: "David Kim",
+    //   role: "VP of Engineering",
+    //   bio: "Former Engineering Manager at Anthropic. Specialist in scalable AI infrastructure.",
+    //   image: "/team/david.jpg",
+    // },
+  ];
 
 const milestones = [
   {
@@ -87,13 +88,13 @@ const milestones = [
       "Development of the Cognitive Ingestion & Belief Formation Engine architecture.",
   },
   {
-    year: "2024",
+    year: "2025",
     title: "Beta Development",
     description:
       "Core platform development and preparation for beta testing program.",
   },
   {
-    year: "2024",
+    year: "2025",
     title: "Beta Launch",
     description:
       "Opening beta access to developers and early adopters to validate the platform.",
@@ -122,7 +123,9 @@ export default function AboutPage() {
               <Link href="/contact" className="btn-ghost">
                 Contact
               </Link>
-              <Link href="/contact" className="btn-primary">Get Started</Link>
+              <Link href="/contact" className="btn-primary">
+                Get Started
+              </Link>
             </div>
           </div>
         </div>
@@ -136,8 +139,8 @@ export default function AboutPage() {
             <span className="block gradient-text">AI Memory Management</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 text-balance leading-relaxed">
-            At HeadKey, we&apos;re building the next generation of memory systems
-            that enable AI agents to think, learn, and remember with
+            At HeadKey, we&apos;re building the next generation of memory
+            systems that enable AI agents to think, learn, and remember with
             unprecedented intelligence and efficiency.
           </p>
         </div>
@@ -158,10 +161,10 @@ export default function AboutPage() {
                 infrastructure for AI applications worldwide.
               </p>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Through our revolutionary CIBFE architecture, we&apos;re enabling AI
-                agents to not just store information, but to truly understand,
-                contextualize, and intelligently manage their knowledge over
-                time.
+                Through our revolutionary CIBFE architecture, we&apos;re
+                enabling AI agents to not just store information, but to truly
+                understand, contextualize, and intelligently manage their
+                knowledge over time.
               </p>
             </div>
             <div className="relative">
@@ -299,7 +302,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-4xl container-padding">
           <ContactCTA
             title="Join Our Mission"
-            description="We&apos;re always looking for talented individuals who share our passion for advancing AI technology. Get in touch to explore opportunities or learn more about HeadKey."
+            description="We're always looking for talented individuals who share our passion for advancing AI technology. Get in touch to explore opportunities or learn more about HeadKey."
           />
         </div>
       </section>
