@@ -1,27 +1,26 @@
-'use client';
+"use client";
 
-import { 
+import {
   EnvelopeIcon,
   ArrowRightIcon,
-  ChatBubbleLeftRightIcon
-} from '@heroicons/react/24/outline';
-import Link from 'next/link';
+  ChatBubbleLeftRightIcon,
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
 
 interface ContactCTAProps {
   title?: string;
   description?: string;
-  variant?: 'default' | 'compact' | 'inline';
+  variant?: "default" | "compact" | "inline";
   showBackground?: boolean;
 }
 
-export default function ContactCTA({ 
+export default function ContactCTA({
   title = "Have Questions?",
   description = "Get in touch with our team and learn how HeadKey can transform your AI applications.",
-  variant = 'default',
-  showBackground = true
+  variant = "default",
+  showBackground = true,
 }: ContactCTAProps) {
-  
-  if (variant === 'inline') {
+  if (variant === "inline") {
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-center space-x-3 mb-4 sm:mb-0">
@@ -45,9 +44,11 @@ export default function ContactCTA({
     );
   }
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
-      <div className={`text-center p-6 rounded-xl ${showBackground ? 'bg-gray-50 border border-gray-200' : ''}`}>
+      <div
+        className={`text-center p-6 rounded-xl ${showBackground ? "bg-gray-50 border border-gray-200" : ""}`}
+      >
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600 mb-4 text-sm">{description}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -66,16 +67,20 @@ export default function ContactCTA({
 
   // Default variant
   return (
-    <div className={`text-center p-8 rounded-2xl ${showBackground ? 'bg-blue-50 border border-blue-200' : ''}`}>
+    <div
+      className={`text-center p-8 rounded-2xl ${showBackground ? "bg-blue-50 border border-blue-200" : ""}`}
+    >
       <div className="flex justify-center mb-6">
         <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center">
           <ChatBubbleLeftRightIcon className="w-8 h-8 text-blue-600" />
         </div>
       </div>
-      
+
       <h3 className="text-2xl font-bold text-gray-900 mb-4">{title}</h3>
-      <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">{description}</p>
-      
+      <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        {description}
+      </p>
+
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Link href="/contact" className="btn-secondary text-lg px-6 py-3">
           <EnvelopeIcon className="w-5 h-5 mr-2" />
@@ -86,14 +91,17 @@ export default function ContactCTA({
           <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
-      
+
       <div className="mt-6 text-sm text-gray-500">
         <p>
-          Email us at{' '}
-          <a href="mailto:hello@headkey.ai" className="text-blue-600 hover:text-blue-700">
-            hello@headkey.ai
-          </a>
-          {' '}or schedule a demo call
+          Email us at{" "}
+          <a
+            href="mailto:support@savantly.net"
+            className="text-blue-600 hover:text-blue-700"
+          >
+            support@savantly.net
+          </a>{" "}
+          or schedule a demo call
         </p>
       </div>
     </div>
