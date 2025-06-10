@@ -10,7 +10,7 @@ export const SocialLinks = () => {
         },
         {
           name: "github",
-          url: "https://www.github.com/savantly-net",
+          url: "https://www.github.com/savantly-net/headkey",
         },
         {
           name: "corporate",

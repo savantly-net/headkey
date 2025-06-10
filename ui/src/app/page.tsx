@@ -114,6 +114,22 @@ const architectureFeatures = [
 
 const pricingTiers = [
   {
+    name: "Open Source",
+    price: "Free",
+    period: "",
+    description: "Community-driven development and collaboration",
+    features: [
+      "Unlimited memory records",
+      "Unlimited API requests per second",
+      "All core CIBFE modules",
+      "Community support",
+      "Documentation access",
+      "Beta features preview",
+    ],
+    cta: "Join Beta",
+    popular: false,
+  },
+  {
     name: "Developer Preview",
     price: "Free",
     period: "",
@@ -230,7 +246,9 @@ export default function HomePage() {
             </div>
             <div className="flex items-center space-x-4">
               <button className="btn-ghost">Sign In</button>
-              <Link href="/contact" className="btn-primary">Get Started</Link>
+              <Link href="/contact" className="btn-primary">
+                Get Started
+              </Link>
             </div>
           </div>
         </div>
@@ -260,14 +278,20 @@ export default function HomePage() {
             </p>
 
             <div className="fade-in fade-in-delay-3 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/contact" className="btn-primary text-lg px-8 py-4 group">
-            Join Beta Program
-            <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link href="/contact" className="btn-secondary text-lg px-8 py-4 group">
-            <PlayIcon className="mr-2 w-5 h-5" />
-            Watch Demo
-          </Link>
+              <Link
+                href="/contact"
+                className="btn-primary text-lg px-8 py-4 group"
+              >
+                Join Beta Program
+                <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/contact"
+                className="btn-secondary text-lg px-8 py-4 group"
+              >
+                <PlayIcon className="mr-2 w-5 h-5" />
+                Watch Demo
+              </Link>
             </div>
 
             <div className="mt-16 fade-in fade-in-delay-3">
@@ -470,9 +494,9 @@ export default function HomePage() {
               Built on Proven Principles
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              HeadKey&apos;s CIBFE architecture is designed around core principles
-              that ensure reliability, performance, and scalability for
-              enterprise AI applications.
+              HeadKey&apos;s CIBFE architecture is designed around core
+              principles that ensure reliability, performance, and scalability
+              for enterprise AI applications.
             </p>
           </div>
 
@@ -504,9 +528,9 @@ export default function HomePage() {
               Early Access Pricing
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Get early access to HeadKey&apos;s revolutionary CIBFE architecture.
-              Join our beta program and help shape the future of AI memory
-              management.
+              Get early access to HeadKey&apos;s revolutionary CIBFE
+              architecture. Join our beta program and help shape the future of
+              AI memory management.
             </p>
           </div>
 
@@ -570,9 +594,9 @@ export default function HomePage() {
               Why Choose HeadKey?
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto text-balance">
-              See how HeadKey&apos;s revolutionary CIBFE architecture outperforms
-              traditional memory solutions with advanced features designed for
-              modern AI applications.
+              See how HeadKey&apos;s revolutionary CIBFE architecture
+              outperforms traditional memory solutions with advanced features
+              designed for modern AI applications.
             </p>
           </div>
 
@@ -588,11 +612,14 @@ export default function HomePage() {
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto text-balance">
             Join our exclusive beta program and be among the first to experience
-            HeadKey&apos;s revolutionary CIBFE architecture. Help us build the future
-            of AI memory management.
+            HeadKey&apos;s revolutionary CIBFE architecture. Help us build the
+            future of AI memory management.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/contact" className="btn-primary text-lg px-8 py-4 group">
+            <Link
+              href="/contact"
+              className="btn-primary text-lg px-8 py-4 group"
+            >
               Join Beta Program
               <ArrowRightIcon className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
