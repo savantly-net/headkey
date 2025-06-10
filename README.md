@@ -14,12 +14,12 @@ Headkey solves a critical challenge in AI systems: **autonomous memory managemen
 - **⚖️ Belief Management**: Maintains coherent knowledge with conflict detection and resolution
 - **🗑️ Selective Forgetting**: Prunes irrelevant data while preserving crucial information
 - **🏗️ Modular Architecture**: Six specialized modules following SOLID principles
-- **🚀 Production Ready**: Built with Quarkus for cloud-native deployment
+- **🚀 (almost) Production Ready**: Built with Quarkus for cloud-native deployment
 
 ### Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────────────┐
 │                        CIBFE Architecture                       │
 ├─────────────────┬───────────────┬───────────────┬─────────────────┤
 │ Information     │ Contextual    │ Memory        │ Belief          │
@@ -300,8 +300,8 @@ The project follows SOLID principles and 12-factor app methodology:
 
 ---
 
-**Version**: `1.0.0-SNAPSHOT`  
-**Framework**: Quarkus (Supersonic Subatomic Java)  
+**Version**: `1.0.0-SNAPSHOT`
+**Framework**: Quarkus (Supersonic Subatomic Java)
 **License**: [Project License]
 
 For more information about Quarkus, visit: https://quarkus.io/
