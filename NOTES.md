@@ -2,6 +2,10 @@
 
 **This is a living document. Update it when the system is changed**
 
+## IMPORTANT
+This application is designed for large scale operations.
+Every architecture decision should be made with scalability, performance and extention capabilities in mind.
+
 ## 🎯 Project Overview
 
 **HeadKey** is a sophisticated Memory API system for AI agents built on the **Cognitive Ingestion & Belief Formation Engine (CIBFE)** architecture. It provides intelligent memory management with automatic categorization, similarity search, belief tracking, and forgetting capabilities.
