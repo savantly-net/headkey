@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+
 import java.time.Instant;
 import java.util.*;
 
@@ -57,10 +58,7 @@ class JpaBeliefRelationshipServiceTest {
         testBeliefEntity1 = createTestBeliefEntity(BELIEF_1_ID, "The sky is blue");
         testBeliefEntity2 = createTestBeliefEntity(BELIEF_2_ID, "The ocean is vast");
         
-        // Setup common mocks
-        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
-        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
-        when(beliefRepository.existsById(BELIEF_3_ID)).thenReturn(true);
+
     }
 
     // ========== Relationship Creation Tests ==========
@@ -68,6 +66,8 @@ class JpaBeliefRelationshipServiceTest {
     @Test
     void testCreateRelationship_Success() {
         // Given
+        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
+        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
         when(relationshipRepository.save(any(BeliefRelationshipEntity.class)))
                 .thenReturn(testRelationshipEntity);
 
@@ -114,6 +114,8 @@ class JpaBeliefRelationshipServiceTest {
     @Test
     void testCreateRelationshipWithMetadata_Success() {
         // Given
+        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
+        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("source", "scientific study");
         metadata.put("confidence", 0.95);
@@ -136,6 +138,8 @@ class JpaBeliefRelationshipServiceTest {
     @Test
     void testCreateTemporalRelationship_Success() {
         // Given
+        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
+        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
         Instant effectiveFrom = Instant.now();
         Instant effectiveUntil = effectiveFrom.plusSeconds(3600);
         
@@ -158,6 +162,8 @@ class JpaBeliefRelationshipServiceTest {
     @Test
     void testCreateTemporalRelationship_InvalidTimeRange() {
         // Given
+        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
+        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
         Instant effectiveFrom = Instant.now();
         Instant effectiveUntil = effectiveFrom.minusSeconds(3600); // Before effectiveFrom
 
@@ -174,8 +180,23 @@ class JpaBeliefRelationshipServiceTest {
     @Test
     void testDeprecateBeliefWith_Success() {
         // Given
+        when(beliefRepository.existsById(BELIEF_1_ID)).thenReturn(true);
+        when(beliefRepository.existsById(BELIEF_2_ID)).thenReturn(true);
+        
+        // Create a superseding relationship entity for the mock
+        BeliefRelationshipEntity supersedingEntity = new BeliefRelationshipEntity();
+        supersedingEntity.setId("supersede-rel-001");
+        supersedingEntity.setSourceBeliefId(BELIEF_2_ID); // New belief supersedes old
+        supersedingEntity.setTargetBeliefId(BELIEF_1_ID); // Old belief is superseded
+        supersedingEntity.setAgentId(AGENT_ID);
+        supersedingEntity.setRelationshipType(RelationshipType.SUPERSEDES);
+        supersedingEntity.setStrength(1.0);
+        supersedingEntity.setActive(true);
+        supersedingEntity.setCreatedAt(Instant.now());
+        supersedingEntity.setLastUpdated(Instant.now());
+        
         when(relationshipRepository.save(any(BeliefRelationshipEntity.class)))
-                .thenReturn(testRelationshipEntity);
+                .thenReturn(supersedingEntity);
 
         // When
         BeliefRelationship result = service.deprecateBeliefWith(
@@ -376,11 +397,10 @@ class JpaBeliefRelationshipServiceTest {
         // Given
         List<BeliefRelationshipEntity> relationshipEntities = Arrays.asList(testRelationshipEntity);
         List<BeliefEntity> beliefEntities = Arrays.asList(testBeliefEntity1, testBeliefEntity2);
-        Set<String> beliefIds = new HashSet<>(Arrays.asList(BELIEF_1_ID, BELIEF_2_ID));
         
         when(relationshipRepository.findByAgent(AGENT_ID, false))
                 .thenReturn(relationshipEntities);
-        when(beliefRepository.findByIds(beliefIds))
+        when(beliefRepository.findByIds(any(Set.class)))
                 .thenReturn(beliefEntities);
 
         // When
@@ -388,12 +408,15 @@ class JpaBeliefRelationshipServiceTest {
 
         // Then
         assertNotNull(result);
+        assertNotNull(result.getAgentId());
         assertEquals(AGENT_ID, result.getAgentId());
+        assertNotNull(result.getBeliefs());
         assertEquals(2, result.getBeliefs().size());
+        assertNotNull(result.getRelationships());
         assertEquals(1, result.getRelationships().size());
         
         verify(relationshipRepository).findByAgent(AGENT_ID, false);
-        verify(beliefRepository).findByIds(any());
+        verify(beliefRepository).findByIds(any(Set.class));
     }
 
     @Test
@@ -535,6 +558,9 @@ class JpaBeliefRelationshipServiceTest {
         entity.setStatement(statement);
         entity.setActive(true);
         entity.setCreatedAt(Instant.now());
+        entity.setLastUpdated(Instant.now());
+        entity.setConfidence(0.8);
+        entity.setReinforcementCount(0);
         return entity;
     }
 

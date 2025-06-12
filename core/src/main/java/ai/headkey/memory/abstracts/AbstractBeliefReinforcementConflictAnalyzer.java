@@ -10,6 +10,7 @@ import ai.headkey.memory.spi.BeliefStorageService;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +31,8 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 public abstract class AbstractBeliefReinforcementConflictAnalyzer implements BeliefReinforcementConflictAnalyzer {
+
+    private static final Logger LOG = Logger.getLogger(AbstractBeliefReinforcementConflictAnalyzer.class.getName());
 
     // Service dependencies
     protected final BeliefExtractionService extractionService;
@@ -66,9 +69,9 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
         }
 
         try {
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Starting analysis for memory: " + newMemory.getId());
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Memory content: '" + newMemory.getContent() + "'");
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Extraction service: " + extractionService.getClass().getSimpleName());
+            LOG.fine("Starting analysis for memory: " + newMemory.getId());
+            LOG.fine("Memory content: '" + newMemory.getContent() + "'");
+            LOG.fine("Extraction service: " + extractionService.getClass().getSimpleName());
             
             BeliefUpdateResult result = new BeliefUpdateResult();
             result.setAgentId(newMemory.getAgentId());
@@ -78,27 +81,27 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
             List<BeliefExtractionService.ExtractedBelief> extractedBeliefs = extractionService.extractBeliefs(
                 newMemory.getContent(), newMemory.getAgentId(), newMemory.getCategory());
 
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Received " + extractedBeliefs.size() + " extracted beliefs from extraction service");
+            LOG.fine("Received " + extractedBeliefs.size() + " extracted beliefs from extraction service");
 
             for (BeliefExtractionService.ExtractedBelief extracted : extractedBeliefs) {
-                System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Processing extracted belief: " + extracted.getStatement());
+                LOG.fine("Processing extracted belief: " + extracted.getStatement());
                 processExtractedBelief(extracted, newMemory, result);
             }
 
             // If no beliefs were extracted, create a general memory-based belief
             if (extractedBeliefs.isEmpty()) {
-                System.out.println("AbstractBeliefReinforcementConflictAnalyzer: No beliefs extracted, creating general belief");
+                LOG.fine("No beliefs extracted, creating general belief");
                 createGeneralBelief(newMemory, result);
             }
 
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Final result - " + 
+            LOG.fine("Final result - " + 
                 result.getNewBeliefs().size() + " new beliefs, " + 
                 result.getReinforcedBeliefs().size() + " reinforced beliefs");
 
             totalAnalyses++;
             return result;
         } catch (Exception e) {
-            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Analysis failed with exception: " + e.getMessage());
+            LOG.severe("Analysis failed with exception: " + e.getMessage());
             e.printStackTrace();
             throw new BeliefAnalysisException("Failed to analyze memory: " + e.getMessage(), e);
         }

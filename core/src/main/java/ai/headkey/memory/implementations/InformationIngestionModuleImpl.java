@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.*;
 
 import ai.headkey.memory.dto.BeliefUpdateResult;
 import ai.headkey.memory.dto.CategoryLabel;
@@ -40,6 +41,8 @@ import ai.headkey.memory.interfaces.MemoryEncodingSystem;
  * @since 1.0
  */
 public class InformationIngestionModuleImpl implements InformationIngestionModule {
+
+    private static final Logger LOG = Logger.getLogger(InformationIngestionModuleImpl.class.getName());
     
     private final ContextualCategorizationEngine categorizationEngine;
     private final MemoryEncodingSystem encodingSystem;
@@ -150,21 +153,46 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
             // Step 4: Analyze beliefs
             BeliefUpdateResult beliefResult = null;
             if ((Boolean) configuration.get("enableBeliefAnalysis")) {
-                System.out.println("Analyzing memory for beliefs: " + memoryRecord.getId());
-                System.out.println("Memory content: '" + memoryRecord.getContent() + "'");
-                beliefResult = beliefAnalyzer.analyzeNewMemory(memoryRecord);
-                if (beliefResult != null) {
-                    System.out.println("Belief analysis result: " + 
-                        beliefResult.getNewBeliefs().size() + " new beliefs, " + 
-                        beliefResult.getReinforcedBeliefs().size() + " reinforced beliefs");
-                    for (var belief : beliefResult.getNewBeliefs()) {
-                        System.out.println("  New belief: " + belief.getStatement());
+                LOG.info(String.format("Starting belief analysis for memory: %s, agent: %s", 
+                    memoryRecord.getId(), input.getAgentId()));
+                LOG.finest(String.format("Memory content for analysis: '%s'", memoryRecord.getContent()));
+                
+                try {
+                    beliefResult = beliefAnalyzer.analyzeNewMemory(memoryRecord);
+                    
+                    if (beliefResult != null) {
+                        LOG.info(String.format("Belief analysis completed successfully - ID: %s, New: %d, Reinforced: %d, Conflicts: %d",
+                            memoryRecord.getId(),
+                            beliefResult.getNewBeliefs() != null ? beliefResult.getNewBeliefs().size() : 0,
+                            beliefResult.getReinforcedBeliefs() != null ? beliefResult.getReinforcedBeliefs().size() : 0,
+                            beliefResult.getConflicts() != null ? beliefResult.getConflicts().size() : 0));
+                        
+                        // Log new beliefs created
+                        if (beliefResult.getNewBeliefs() != null) {
+                            for (var belief : beliefResult.getNewBeliefs()) {
+                                LOG.finest(String.format("New belief created - ID: %s, Statement: '%s', Confidence: %.2f",
+                                    belief.getId(), belief.getStatement(), belief.getConfidence()));
+                            }
+                        }
+                        
+                        // Log reinforced beliefs
+                        if (beliefResult.getReinforcedBeliefs() != null) {
+                            for (var belief : beliefResult.getReinforcedBeliefs()) {
+                                LOG.finest(String.format("Belief reinforced - ID: %s, Statement: '%s'",
+                                    belief.getId(), belief.getStatement()));
+                            }
+                        }
+                        
+                    } else {
+                        LOG.warning(String.format("Belief analysis returned null result for memory: %s", memoryRecord.getId()));
                     }
-                } else {
-                    System.out.println("Belief analysis returned null result");
+                } catch (Exception e) {
+                    LOG.severe(String.format("Error during belief analysis for memory %s: %s", 
+                        memoryRecord.getId(), e.getMessage()));
+                    // Continue processing even if belief analysis fails
                 }
             } else {
-                System.out.println("Belief analysis is disabled in configuration");
+                LOG.finest(String.format("Belief analysis is disabled in configuration for memory: %s", memoryRecord.getId()));
             }
             
             // Step 5: Create and populate result
