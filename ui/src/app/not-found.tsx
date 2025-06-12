@@ -45,9 +45,9 @@ export default function NotFound() {
           {/* Description */}
           <div className="mb-8">
             <p className="text-lg text-gray-600 mb-6">
-              Oops! The page you&apos;re looking for seems to have been forgotten by
-              our memory system. Don&apos;t worry, our CIBFE architecture is working
-              to retrieve it.
+              Oops! The page you&apos;re looking for seems to have been
+              forgotten by our memory system. Don&apos;t worry, our CIBFE
+              architecture is working to retrieve it.
             </p>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -73,51 +73,6 @@ export default function NotFound() {
               <HomeIcon className="w-5 h-5 mr-2" />
               Return to Homepage
             </Link>
-
-            <div className="grid grid-cols-3 gap-4">
-              <Link href="/about" className="btn-secondary text-center">
-                About Us
-              </Link>
-              <Link href="/contact" className="btn-secondary text-center">
-                Contact
-              </Link>
-              <Link href="/#docs" className="btn-secondary text-center">
-                Documentation
-              </Link>
-            </div>
-          </div>
-
-          {/* Popular Links */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">
-              Popular Pages
-            </h3>
-            <div className="space-y-2">
-              <Link
-                href="/#features"
-                className="block text-blue-600 hover:text-blue-700 text-sm"
-              >
-                → Features & Capabilities
-              </Link>
-              <Link
-                href="/#pricing"
-                className="block text-blue-600 hover:text-blue-700 text-sm"
-              >
-                → Pricing Plans
-              </Link>
-              <Link
-                href="/#architecture"
-                className="block text-blue-600 hover:text-blue-700 text-sm"
-              >
-                → CIBFE Architecture
-              </Link>
-              <Link
-                href="/contact"
-                className="block text-blue-600 hover:text-blue-700 text-sm"
-              >
-                → Get Support
-              </Link>
-            </div>
           </div>
 
           {/* Help Text */}
