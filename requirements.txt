@@ -1,0 +1,20 @@
+# Python dependencies for HeadKey End-to-End Testing
+# The test script uses only Python standard library modules for maximum compatibility
+
+# No external dependencies required!
+# The script uses:
+# - urllib.request (HTTP requests)
+# - json (JSON processing)  
+# - pathlib (file path handling)
+# - argparse (command line arguments)
+# - datetime (timestamps)
+
+# Optional: Enhanced testing features (not required for basic testing)
+# pytest>=7.0.0
+# pytest-html>=3.0.0
+
+# Optional: For colored terminal output on Windows
+# colorama>=0.4.0
+
+# Optional: For API response validation in advanced testing
+# jsonschema>=4.0.0
