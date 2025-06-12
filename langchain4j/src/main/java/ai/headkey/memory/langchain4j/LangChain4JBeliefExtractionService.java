@@ -1,9 +1,14 @@
 package ai.headkey.memory.langchain4j;
 
 import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.langchain4j.dto.*;
+import ai.headkey.memory.langchain4j.services.ai.*;
 import ai.headkey.memory.spi.BeliefExtractionService;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.service.AiServices;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * AI-powered belief extraction service using LangChain4J.
@@ -27,66 +32,65 @@ import java.util.*;
  * - Network connectivity for API calls
  * - Sufficient quota/credits for API usage
  * 
- * Configuration:
- * - Model selection (GPT-3.5, GPT-4, Claude, etc.)
- * - Temperature and other generation parameters
- * - Prompt templates for different belief types
- * - Caching strategies for performance
- * 
- * Note: This is a placeholder implementation that demonstrates the architecture
- * for integrating AI services. The actual implementation would require:
- * 1. LangChain4J dependencies in the module
- * 2. Proper LLM service configuration
- * 3. Prompt engineering for belief extraction
- * 4. Error handling for API failures
- * 5. Rate limiting and retry logic
- * 
  * @since 1.0
  */
 public class LangChain4JBeliefExtractionService implements BeliefExtractionService {
 
-    // TODO: Inject these dependencies when LangChain4J is fully integrated
-    // private final ChatLanguageModel chatModel;
-    // private final EmbeddingModel embeddingModel;
-    // private final PromptTemplate beliefExtractionPrompt;
-    // private final PromptTemplate conflictDetectionPrompt;
-    
-    private final Map<String, Object> configuration;
-    private final boolean mockMode;
-    
+    private final LangChain4jBeliefExtractionAiService beliefAiService;
+    private final LangChain4jSimilarityAiService similarityService;
+    private final LangChain4jConflictDetectionAiService conflictService;
+    private final String serviceName;
+
     /**
-     * Creates a new LangChain4J belief extraction service.
+     * Constructor with ChatModel dependency.
+     * Creates AI service instances using LangChain4J AiServices.
      * 
-     * In the actual implementation, this would accept:
-     * - ChatLanguageModel for text generation
-     * - EmbeddingModel for semantic similarity
-     * - Configuration parameters
-     * - Prompt templates
+     * @param chatModel The LangChain4j ChatModel to use for AI operations
+     * @throws IllegalArgumentException if chatModel is null
      */
-    public LangChain4JBeliefExtractionService() {
-        this.configuration = new HashMap<>();
-        this.mockMode = true; // Set to true until actual implementation is ready
-        
-        // Default configuration
-        this.configuration.put("model", "gpt-3.5-turbo");
-        this.configuration.put("temperature", 0.3);
-        this.configuration.put("maxTokens", 500);
-        this.configuration.put("timeout", 30000);
-        this.configuration.put("retryAttempts", 3);
-        this.configuration.put("enableCaching", true);
-        this.configuration.put("supportedLanguages", Arrays.asList("English", "Spanish", "French", "German"));
+    public LangChain4JBeliefExtractionService(ChatModel chatModel) {
+        Objects.requireNonNull(chatModel, "ChatModel cannot be null");
+        this.beliefAiService = AiServices.create(LangChain4jBeliefExtractionAiService.class, chatModel);
+        this.similarityService = AiServices.create(LangChain4jSimilarityAiService.class, chatModel);
+        this.conflictService = AiServices.create(LangChain4jConflictDetectionAiService.class, chatModel);
+        this.serviceName = "LangChain4j-" + chatModel.getClass().getSimpleName();
     }
-    
+
     /**
-     * Constructor with custom configuration.
+     * Constructor with AI service dependencies.
+     * Allows consumers to provide their own AI service implementations.
      * 
-     * @param config Configuration parameters for the LLM service
+     * @param beliefAiService The belief extraction AI service
+     * @param similarityService The similarity calculation AI service  
+     * @param conflictService The conflict detection AI service
+     * @throws IllegalArgumentException if any service is null
      */
-    public LangChain4JBeliefExtractionService(Map<String, Object> config) {
-        this();
-        if (config != null) {
-            this.configuration.putAll(config);
-        }
+    public LangChain4JBeliefExtractionService(LangChain4jBeliefExtractionAiService beliefAiService,
+                                             LangChain4jSimilarityAiService similarityService,
+                                             LangChain4jConflictDetectionAiService conflictService) {
+        this.beliefAiService = Objects.requireNonNull(beliefAiService, "BeliefAiService cannot be null");
+        this.similarityService = Objects.requireNonNull(similarityService, "SimilarityService cannot be null");
+        this.conflictService = Objects.requireNonNull(conflictService, "ConflictService cannot be null");
+        this.serviceName = "LangChain4j-CustomServices";
+    }
+
+    /**
+     * Constructor with AI service dependencies and custom service name.
+     * 
+     * @param beliefAiService The belief extraction AI service
+     * @param similarityService The similarity calculation AI service  
+     * @param conflictService The conflict detection AI service
+     * @param serviceName The custom service name
+     * @throws IllegalArgumentException if any service or serviceName is null
+     */
+    public LangChain4JBeliefExtractionService(LangChain4jBeliefExtractionAiService beliefAiService,
+                                             LangChain4jSimilarityAiService similarityService,
+                                             LangChain4jConflictDetectionAiService conflictService,
+                                             String serviceName) {
+        this.beliefAiService = Objects.requireNonNull(beliefAiService, "BeliefAiService cannot be null");
+        this.similarityService = Objects.requireNonNull(similarityService, "SimilarityService cannot be null");
+        this.conflictService = Objects.requireNonNull(conflictService, "ConflictService cannot be null");
+        this.serviceName = Objects.requireNonNull(serviceName, "ServiceName cannot be null");
     }
 
     @Override
@@ -98,32 +102,17 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
             throw new IllegalArgumentException("Agent ID cannot be null or empty");
         }
 
-        if (mockMode) {
-            return extractBeliefsWithMockAI(content, agentId, category);
-        }
-
-        // TODO: Actual LangChain4J implementation would look like:
-        /*
         try {
-            // Create prompt for belief extraction
-            String prompt = buildBeliefExtractionPrompt(content, category);
+            String categoryContext = category != null ? 
+                String.format("Primary: %s, Secondary: %s", category.getPrimary(), category.getSecondary()) : 
+                "No specific category";
+
+            BeliefExtractionResponse response = beliefAiService.extractBeliefs(content, agentId, categoryContext);
             
-            // Call LLM for belief extraction
-            AiMessage response = chatModel.generate(prompt);
-            
-            // Parse structured response into ExtractedBelief objects
-            List<ExtractedBelief> beliefs = parseBeliefResponse(response.text(), agentId);
-            
-            // Enhance with embeddings for similarity calculations
-            enhanceWithEmbeddings(beliefs);
-            
-            return beliefs;
+            return parseBeliefResponse(response, agentId);
         } catch (Exception e) {
             throw new BeliefExtractionException("Failed to extract beliefs using AI: " + e.getMessage(), e);
         }
-        */
-        
-        throw new UnsupportedOperationException("AI-powered extraction not yet implemented. Set mockMode=false when ready.");
     }
 
     @Override
@@ -131,25 +120,14 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
         if (statement1 == null || statement2 == null) {
             return 0.0;
         }
-        
-        if (mockMode) {
-            return calculateMockSimilarity(statement1, statement2);
-        }
 
-        // TODO: Actual implementation using embeddings:
-        /*
         try {
-            Embedding embedding1 = embeddingModel.embed(statement1).content();
-            Embedding embedding2 = embeddingModel.embed(statement2).content();
-            
-            return CosineSimilarity.between(embedding1, embedding2);
+            SimilarityResponse response = similarityService.calculateSimilarity(statement1, statement2);
+            return Math.max(0.0, Math.min(1.0, response.getSimilarityScore()));
         } catch (Exception e) {
-            // Fallback to simpler method
-            return calculateMockSimilarity(statement1, statement2);
+            // Fallback to simple similarity
+            return calculateSimpleSimilarity(statement1, statement2);
         }
-        */
-        
-        throw new UnsupportedOperationException("AI-powered similarity not yet implemented");
     }
 
     @Override
@@ -157,25 +135,18 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
         if (statement1 == null || statement2 == null) {
             return false;
         }
-        
-        if (mockMode) {
-            return detectMockConflict(statement1, statement2, category1, category2);
-        }
 
-        // TODO: Actual implementation using LLM reasoning:
-        /*
         try {
-            String prompt = buildConflictDetectionPrompt(statement1, statement2, category1, category2);
-            AiMessage response = chatModel.generate(prompt);
+            String categoryInfo = String.format("Category1: %s, Category2: %s", 
+                category1 != null ? category1 : "unknown", 
+                category2 != null ? category2 : "unknown");
             
-            return parseConflictResponse(response.text());
+            ConflictDetectionResponse response = conflictService.detectConflict(statement1, statement2, categoryInfo);
+            return response.isConflicting() && response.getConfidence() > 0.6;
         } catch (Exception e) {
-            // Fallback to simpler detection
-            return detectMockConflict(statement1, statement2, category1, category2);
+            // Fallback to simple conflict detection
+            return detectSimpleConflict(statement1, statement2);
         }
-        */
-        
-        throw new UnsupportedOperationException("AI-powered conflict detection not yet implemented");
     }
 
     @Override
@@ -183,24 +154,13 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
         if (statement == null || statement.trim().isEmpty()) {
             return "general";
         }
-        
-        if (mockMode) {
-            return extractMockCategory(statement);
-        }
 
-        // TODO: Actual implementation using LLM classification:
-        /*
         try {
-            String prompt = buildCategoryExtractionPrompt(statement);
-            AiMessage response = chatModel.generate(prompt);
-            
-            return parseCategoryResponse(response.text());
+            CategoryExtractionResponse response = beliefAiService.extractCategory(statement);
+            return response.getCategory() != null ? response.getCategory() : "general";
         } catch (Exception e) {
             return "general";
         }
-        */
-        
-        throw new UnsupportedOperationException("AI-powered categorization not yet implemented");
     }
 
     @Override
@@ -208,53 +168,34 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
         if (content == null || statement == null) {
             return 0.5;
         }
-        
-        if (mockMode) {
-            return calculateMockConfidence(content, statement, context);
-        }
 
-        // TODO: Actual implementation using LLM confidence scoring:
-        /*
         try {
-            String prompt = buildConfidencePrompt(content, statement, context);
-            AiMessage response = chatModel.generate(prompt);
-            
-            return parseConfidenceResponse(response.text());
+            String contextInfo = buildContextInfo(context);
+            ConfidenceResponse response = beliefAiService.calculateConfidence(content, statement, contextInfo);
+            return Math.max(0.0, Math.min(1.0, response.getConfidence()));
         } catch (Exception e) {
             return 0.5; // Default confidence
         }
-        */
-        
-        throw new UnsupportedOperationException("AI-powered confidence calculation not yet implemented");
     }
 
     @Override
     public boolean isHealthy() {
-        if (mockMode) {
-            return true; // Mock mode is always healthy
-        }
-
-        // TODO: Actual health check:
-        /*
         try {
-            // Test API connectivity
-            AiMessage response = chatModel.generate("Health check");
-            return response != null && response.text() != null;
+            // Perform a simple health check
+            BeliefExtractionResponse response = beliefAiService.extractBeliefs(
+                "I like coffee", "test-agent", "Test category");
+            return response != null && response.getBeliefs() != null;
         } catch (Exception e) {
             return false;
         }
-        */
-        
-        return false; // Not healthy when not implemented
     }
 
     @Override
     public Map<String, Object> getServiceInfo() {
-        Map<String, Object> info = new HashMap<>(configuration);
-        
+        Map<String, Object> info = new HashMap<>();
         info.put("serviceType", "LangChain4JBeliefExtractionService");
-        info.put("version", "1.0-PLACEHOLDER");
-        info.put("description", "AI-powered belief extraction using LangChain4J (placeholder implementation)");
+        info.put("version", "1.0");
+        info.put("description", "AI-powered belief extraction using LangChain4J");
         info.put("capabilities", Arrays.asList(
             "semantic_understanding",
             "context_awareness", 
@@ -262,95 +203,78 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
             "advanced_conflict_detection",
             "confidence_scoring"
         ));
-        info.put("mockMode", mockMode);
-        info.put("status", mockMode ? "mock_implementation" : "not_implemented");
-        info.put("requirements", Arrays.asList(
-            "langchain4j-core",
-            "langchain4j-open-ai", // or other provider
-            "API_KEY environment variable",
-            "network connectivity"
+        info.put("serviceName", serviceName);
+        info.put("aiServices", Map.of(
+            "beliefExtraction", beliefAiService.getClass().getSimpleName(),
+            "similarity", similarityService.getClass().getSimpleName(),
+            "conflictDetection", conflictService.getClass().getSimpleName()
         ));
-        
         return info;
     }
 
-    // ========== Mock Implementation Methods ==========
-    // These provide a working implementation for demonstration purposes
+    // ========== Private Helper Methods ==========
 
-    private List<ExtractedBelief> extractBeliefsWithMockAI(String content, String agentId, CategoryLabel category) {
+    private List<ExtractedBelief> parseBeliefResponse(BeliefExtractionResponse response, String agentId) {
         List<ExtractedBelief> beliefs = new ArrayList<>();
-        String normalized = content.toLowerCase();
         
-        // Mock sophisticated AI extraction with better heuristics
-        if (normalized.contains("love") || normalized.contains("favorite") || normalized.contains("prefer")) {
-            beliefs.add(new ExtractedBelief(
-                "AI-extracted preference: " + extractPreferenceFromText(content),
-                agentId,
-                "preference",
-                0.85, // Higher confidence than simple pattern matching
-                !normalized.contains("don't") && !normalized.contains("not")
-            ));
+        if (response == null || response.getBeliefs() == null) {
+            return beliefs;
         }
-        
-        if (normalized.contains(" is ") || normalized.contains(" was ") || normalized.contains(" are ")) {
-            beliefs.add(new ExtractedBelief(
-                "AI-extracted fact: " + content,
+
+        for (BeliefData beliefData : response.getBeliefs()) {
+            ExtractedBelief belief = new ExtractedBelief(
+                beliefData.getStatement(),
                 agentId,
-                "fact",
-                0.80,
-                !normalized.contains("not") && !normalized.contains("isn't")
-            ));
-        }
-        
-        if (normalized.contains("friend") || normalized.contains("know") || normalized.contains("meet")) {
-            beliefs.add(new ExtractedBelief(
-                "AI-extracted relationship: " + content,
-                agentId,
-                "relationship",
-                0.75,
-                !normalized.contains("don't know") && !normalized.contains("not friends")
-            ));
-        }
-        
-        // Add semantic tags that an AI would identify
-        for (ExtractedBelief belief : beliefs) {
-            belief.addTag("ai_extracted");
-            belief.addTag("semantic_analysis");
-            belief.addMetadata("extraction_method", "mock_llm");
-            belief.addMetadata("model_used", configuration.get("model"));
+                beliefData.getCategory(),
+                beliefData.getConfidence(),
+                beliefData.isPositive()
+            );
+            
+            // Add tags if present
+            if (beliefData.getTags() != null) {
+                beliefData.getTags().forEach(belief::addTag);
+            }
+            
+            // Add metadata
+            belief.addMetadata("reasoning", beliefData.getReasoning());
+            belief.addMetadata("extractionMethod", "langchain4j-ai");
+            
+            beliefs.add(belief);
         }
         
         return beliefs;
     }
-    
-    private double calculateMockSimilarity(String statement1, String statement2) {
-        // Mock semantic similarity calculation (better than simple word overlap)
+
+    private String buildContextInfo(ExtractionContext context) {
+        if (context == null) {
+            return "No additional context";
+        }
+        
+        StringBuilder info = new StringBuilder();
+        
+        if (context.getSourceMemory() != null) {
+            info.append("Source: ").append(context.getSourceMemory().getId()).append("; ");
+        }
+        
+        if (!context.getExistingBeliefs().isEmpty()) {
+            info.append("Existing beliefs count: ").append(context.getExistingBeliefs().size()).append("; ");
+        }
+        
+        if (!context.getAdditionalContext().isEmpty()) {
+            info.append("Additional context: ").append(context.getAdditionalContext().toString());
+        }
+        
+        return info.length() > 0 ? info.toString() : "No additional context";
+    }
+
+    private double calculateSimpleSimilarity(String statement1, String statement2) {
         String s1 = statement1.toLowerCase().trim();
         String s2 = statement2.toLowerCase().trim();
         
-        if (s1.equals(s2)) return 1.0;
-        
-        // Mock semantic understanding - identify synonyms and related concepts
-        String[] semanticGroups = {
-            "like,love,enjoy,prefer,favor",
-            "dislike,hate,despise,loathe",
-            "is,are,was,were,being",
-            "friend,buddy,pal,companion",
-            "home,house,residence,place"
-        };
-        
-        double semanticBoost = 0.0;
-        for (String group : semanticGroups) {
-            String[] synonyms = group.split(",");
-            boolean s1HasWord = Arrays.stream(synonyms).anyMatch(s1::contains);
-            boolean s2HasWord = Arrays.stream(synonyms).anyMatch(s2::contains);
-            if (s1HasWord && s2HasWord) {
-                semanticBoost += 0.3;
-                break;
-            }
+        if (s1.equals(s2)) {
+            return 1.0;
         }
         
-        // Basic word overlap
         String[] words1 = s1.split("\\s+");
         String[] words2 = s2.split("\\s+");
         
@@ -363,138 +287,62 @@ public class LangChain4JBeliefExtractionService implements BeliefExtractionServi
         Set<String> union = new HashSet<>(set1);
         union.addAll(set2);
         
-        double baseScore = union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
-        
-        return Math.min(1.0, baseScore + semanticBoost);
+        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
     }
-    
-    private boolean detectMockConflict(String statement1, String statement2, String category1, String category2) {
-        // Mock AI conflict detection with better semantic understanding
-        double similarity = calculateMockSimilarity(statement1, statement2);
-        
-        if (similarity < 0.6) {
-            return false; // Not similar enough to conflict
-        }
-        
+
+    private boolean detectSimpleConflict(String statement1, String statement2) {
         String s1 = statement1.toLowerCase();
         String s2 = statement2.toLowerCase();
         
-        // Detect semantic contradictions
-        String[] positiveWords = {"like", "love", "enjoy", "good", "yes", "true", "is"};
-        String[] negativeWords = {"dislike", "hate", "bad", "no", "false", "not", "isn't", "don't"};
+        Pattern negationPattern = Pattern.compile("(?i)(not|never|no|don't|doesn't|isn't|aren't)");
+        boolean hasNegation1 = negationPattern.matcher(s1).find();
+        boolean hasNegation2 = negationPattern.matcher(s2).find();
         
-        boolean s1Positive = Arrays.stream(positiveWords).anyMatch(s1::contains) && 
-                           Arrays.stream(negativeWords).noneMatch(s1::contains);
-        boolean s2Positive = Arrays.stream(positiveWords).anyMatch(s2::contains) && 
-                           Arrays.stream(negativeWords).noneMatch(s2::contains);
-        
-        boolean s1Negative = Arrays.stream(negativeWords).anyMatch(s1::contains);
-        boolean s2Negative = Arrays.stream(negativeWords).anyMatch(s2::contains);
-        
-        return (s1Positive && s2Negative) || (s1Negative && s2Positive);
-    }
-    
-    private String extractMockCategory(String statement) {
-        String normalized = statement.toLowerCase();
-        
-        // Mock AI categorization with better understanding
-        if (normalized.contains("like") || normalized.contains("love") || normalized.contains("prefer") || 
-            normalized.contains("favorite") || normalized.contains("enjoy")) {
-            return "preference";
-        }
-        if (normalized.contains(" is ") || normalized.contains(" are ") || normalized.contains(" was ") || 
-            normalized.contains(" were ") || normalized.contains("fact")) {
-            return "fact";
-        }
-        if (normalized.contains("friend") || normalized.contains("know") || normalized.contains("family") || 
-            normalized.contains("relationship") || normalized.contains("married")) {
-            return "relationship";
-        }
-        if (normalized.contains("live") || normalized.contains("located") || normalized.contains("from") || 
-            normalized.contains("address") || normalized.contains("city")) {
-            return "location";
-        }
-        if (normalized.contains("opinion") || normalized.contains("think") || normalized.contains("believe")) {
-            return "opinion";
+        if (hasNegation1 != hasNegation2) {
+            return calculateSimpleSimilarity(s1, s2) > 0.6;
         }
         
-        return "general";
-    }
-    
-    private double calculateMockConfidence(String content, String statement, ExtractionContext context) {
-        double confidence = 0.7; // Base AI confidence
-        
-        String normalized = content.toLowerCase();
-        
-        // Mock confidence indicators
-        if (normalized.contains("definitely") || normalized.contains("absolutely") || 
-            normalized.contains("certainly") || normalized.contains("sure")) {
-            confidence += 0.2;
-        }
-        if (normalized.contains("maybe") || normalized.contains("perhaps") || 
-            normalized.contains("might") || normalized.contains("possibly")) {
-            confidence -= 0.2;
-        }
-        if (normalized.contains("very") || normalized.contains("really") || 
-            normalized.contains("extremely")) {
-            confidence += 0.1;
-        }
-        
-        // Consider context if available
-        if (context != null && context.getSourceMemory() != null) {
-            // Mock reliability scoring
-            String source = context.getSourceMemory().getMetadata().getSource();
-            if ("user_input".equals(source)) {
-                confidence += 0.1; // Direct user input is more reliable
-            }
-        }
-        
-        return Math.max(0.0, Math.min(1.0, confidence));
-    }
-    
-    private String extractPreferenceFromText(String content) {
-        // Mock AI extraction of preference objects
-        String[] preferenceKeywords = {"favorite", "love", "like", "enjoy", "prefer"};
-        
-        for (String keyword : preferenceKeywords) {
-            int index = content.toLowerCase().indexOf(keyword);
-            if (index >= 0) {
-                int startIndex = index + keyword.length();
-                if (startIndex < content.length()) {
-                    String remainder = content.substring(startIndex).trim();
-                    // Extract next few words as the preference object
-                    String[] words = remainder.split("\\s+");
-                    StringBuilder preference = new StringBuilder();
-                    for (int i = 0; i < Math.min(words.length, 5); i++) {
-                        if (preference.length() > 0) preference.append(" ");
-                        preference.append(words[i]);
-                    }
-                    return preference.toString();
-                }
-            }
-        }
-        
-        return "something";
+        return false;
     }
 
-    // TODO: Add methods for building prompts and parsing responses when LangChain4J is integrated
-    /*
-    private String buildBeliefExtractionPrompt(String content, CategoryLabel category) {
-        return PromptTemplate.from("""
-            Extract beliefs, facts, preferences, and relationships from the following text.
-            Focus on statements that express what someone believes, likes, dislikes, or knows.
-            
-            Text: {{content}}
-            Category context: {{category}}
-            
-            Return results in JSON format with: statement, category, confidence (0-1), positive (true/false)
-            """).apply(Map.of("content", content, "category", category));
+    // ========== Getter Methods for Testing ==========
+
+    /**
+     * Gets the belief AI service instance.
+     * Package-private for testing purposes.
+     * 
+     * @return The belief AI service
+     */
+    LangChain4jBeliefExtractionAiService getBeliefAiService() {
+        return beliefAiService;
     }
-    
-    private List<ExtractedBelief> parseBeliefResponse(String response, String agentId) {
-        // Parse LLM JSON response into ExtractedBelief objects
-        // This would use a JSON parser to extract structured data
-        return new ArrayList<>();
+
+    /**
+     * Gets the similarity AI service instance.
+     * Package-private for testing purposes.
+     * 
+     * @return The similarity AI service
+     */
+    LangChain4jSimilarityAiService getSimilarityService() {
+        return similarityService;
     }
-    */
+
+    /**
+     * Gets the conflict detection AI service instance.
+     * Package-private for testing purposes.
+     * 
+     * @return The conflict detection AI service
+     */
+    LangChain4jConflictDetectionAiService getConflictService() {
+        return conflictService;
+    }
+
+    /**
+     * Gets the service name.
+     * 
+     * @return The service name
+     */
+    public String getServiceName() {
+        return serviceName;
+    }
 }

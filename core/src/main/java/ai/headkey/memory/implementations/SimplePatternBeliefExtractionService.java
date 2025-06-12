@@ -38,7 +38,10 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
 
     @Override
     public List<ExtractedBelief> extractBeliefs(String content, String agentId, CategoryLabel category) {
+        System.out.println("SimplePatternBeliefExtractionService: Extracting beliefs from content: '" + content + "' for agent: " + agentId);
+        
         if (content == null || content.trim().isEmpty()) {
+            System.out.println("SimplePatternBeliefExtractionService: Content is null or empty, no beliefs extracted");
             return new ArrayList<>();
         }
         if (agentId == null || agentId.trim().isEmpty()) {
@@ -47,6 +50,8 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
 
         List<ExtractedBelief> beliefs = new ArrayList<>();
         String normalizedContent = content.toLowerCase().trim();
+        
+        System.out.println("SimplePatternBeliefExtractionService: Normalized content: '" + normalizedContent + "'");
         
         // Extract preferences
         extractPreferences(normalizedContent, agentId, beliefs);
@@ -64,6 +69,11 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
         String beliefCategory = category != null ? category.getPrimary() : "general";
         for (ExtractedBelief belief : beliefs) {
             belief.addMetadata("originalCategory", beliefCategory);
+        }
+        
+        System.out.println("SimplePatternBeliefExtractionService: Extracted " + beliefs.size() + " beliefs from content");
+        for (ExtractedBelief belief : beliefs) {
+            System.out.println("SimplePatternBeliefExtractionService: Extracted belief: " + belief.getStatement());
         }
         
         return beliefs;
@@ -242,9 +252,15 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
      * Extracts preference-based beliefs.
      */
     private void extractPreferences(String content, String agentId, List<ExtractedBelief> beliefs) {
+        System.out.println("SimplePatternBeliefExtractionService: Checking preference patterns for: '" + content + "'");
+        System.out.println("SimplePatternBeliefExtractionService: Preference pattern match: " + preferencePattern.matcher(content).find());
+        
         if (preferencePattern.matcher(content).find()) {
+            System.out.println("SimplePatternBeliefExtractionService: Preference pattern matched, extracting preferences...");
+            
             // Simple preference extraction
             if (content.contains("favorite")) {
+                System.out.println("SimplePatternBeliefExtractionService: Found 'favorite' keyword");
                 int favoriteIdx = content.indexOf("favorite");
                 String remainder = content.substring(favoriteIdx);
                 String statement = "User has preference: " + remainder;
@@ -255,10 +271,12 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
                 belief.addTag("preference");
                 belief.addTag("favorite");
                 beliefs.add(belief);
+                System.out.println("SimplePatternBeliefExtractionService: Added favorite belief: " + statement);
             }
             
             // Handle like/dislike patterns
             if (content.contains("like") && !content.contains("dislike")) {
+                System.out.println("SimplePatternBeliefExtractionService: Found 'like' keyword");
                 String statement = "User likes: " + extractLikeObject(content);
                 double confidence = calculateBasicConfidence(content);
                 boolean positive = !negationPattern.matcher(content).find();
@@ -267,9 +285,11 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
                 belief.addTag("preference");
                 belief.addTag("like");
                 beliefs.add(belief);
+                System.out.println("SimplePatternBeliefExtractionService: Added like belief: " + statement);
             }
             
             if (content.contains("dislike") || content.contains("hate")) {
+                System.out.println("SimplePatternBeliefExtractionService: Found 'dislike' or 'hate' keyword");
                 String statement = "User dislikes: " + extractDislikeObject(content);
                 double confidence = calculateBasicConfidence(content);
                 
@@ -277,7 +297,10 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
                 belief.addTag("preference");
                 belief.addTag("dislike");
                 beliefs.add(belief);
+                System.out.println("SimplePatternBeliefExtractionService: Added dislike belief: " + statement);
             }
+        } else {
+            System.out.println("SimplePatternBeliefExtractionService: No preference pattern matched for content");
         }
     }
 
@@ -285,17 +308,23 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
      * Extracts fact-based beliefs.
      */
     private void extractFacts(String content, String agentId, List<ExtractedBelief> beliefs) {
+        System.out.println("SimplePatternBeliefExtractionService: Checking fact patterns for: '" + content + "'");
+        System.out.println("SimplePatternBeliefExtractionService: Fact pattern match: " + factPattern.matcher(content).find());
+        
         if (factPattern.matcher(content).find()) {
-            // Extract statements that look like facts
-            if (content.contains(" is ") || content.contains(" are ") || content.contains(" was ") || content.contains(" were ")) {
-                String statement = "Fact: " + content;
-                double confidence = calculateBasicConfidence(content);
-                boolean positive = !negationPattern.matcher(content).find();
-                
-                ExtractedBelief belief = new ExtractedBelief(statement, agentId, "fact", confidence, positive);
-                belief.addTag("fact");
-                beliefs.add(belief);
-            }
+            System.out.println("SimplePatternBeliefExtractionService: Fact pattern matched, extracting facts...");
+            
+            // Extract simple fact statements
+            String statement = "Fact: " + content;
+            double confidence = calculateBasicConfidence(content);
+            boolean positive = !negationPattern.matcher(content).find();
+            
+            ExtractedBelief belief = new ExtractedBelief(statement, agentId, "fact", confidence, positive);
+            belief.addTag("fact");
+            beliefs.add(belief);
+            System.out.println("SimplePatternBeliefExtractionService: Added fact belief: " + statement);
+        } else {
+            System.out.println("SimplePatternBeliefExtractionService: No fact pattern matched for content");
         }
     }
 
@@ -303,16 +332,23 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
      * Extracts relationship-based beliefs.
      */
     private void extractRelationships(String content, String agentId, List<ExtractedBelief> beliefs) {
+        System.out.println("SimplePatternBeliefExtractionService: Checking relationship patterns for: '" + content + "'");
+        System.out.println("SimplePatternBeliefExtractionService: Relationship pattern match: " + relationshipPattern.matcher(content).find());
+        
         if (relationshipPattern.matcher(content).find()) {
-            if (content.contains("friend") || content.contains("knows") || content.contains("married") || content.contains("related")) {
-                String statement = "Relationship: " + content;
-                double confidence = calculateBasicConfidence(content);
-                boolean positive = !negationPattern.matcher(content).find();
-                
-                ExtractedBelief belief = new ExtractedBelief(statement, agentId, "relationship", confidence, positive);
-                belief.addTag("relationship");
-                beliefs.add(belief);
-            }
+            System.out.println("SimplePatternBeliefExtractionService: Relationship pattern matched, extracting relationships...");
+            
+            // Extract relationship statements
+            String statement = "Relationship: " + content;
+            double confidence = calculateBasicConfidence(content);
+            boolean positive = !negationPattern.matcher(content).find();
+            
+            ExtractedBelief belief = new ExtractedBelief(statement, agentId, "relationship", confidence, positive);
+            belief.addTag("relationship");
+            beliefs.add(belief);
+            System.out.println("SimplePatternBeliefExtractionService: Added relationship belief: " + statement);
+        } else {
+            System.out.println("SimplePatternBeliefExtractionService: No relationship pattern matched for content");
         }
     }
 
@@ -320,16 +356,23 @@ public class SimplePatternBeliefExtractionService implements BeliefExtractionSer
      * Extracts location-based beliefs.
      */
     private void extractLocations(String content, String agentId, List<ExtractedBelief> beliefs) {
+        System.out.println("SimplePatternBeliefExtractionService: Checking location patterns for: '" + content + "'");
+        System.out.println("SimplePatternBeliefExtractionService: Location pattern match: " + locationPattern.matcher(content).find());
+        
         if (locationPattern.matcher(content).find()) {
-            if (content.contains("lives") || content.contains("located") || content.contains("from")) {
-                String statement = "Location: " + content;
-                double confidence = calculateBasicConfidence(content);
-                boolean positive = !negationPattern.matcher(content).find();
-                
-                ExtractedBelief belief = new ExtractedBelief(statement, agentId, "location", confidence, positive);
-                belief.addTag("location");
-                beliefs.add(belief);
-            }
+            System.out.println("SimplePatternBeliefExtractionService: Location pattern matched, extracting locations...");
+            
+            // Extract location statements
+            String statement = "Location: " + content;
+            double confidence = calculateBasicConfidence(content);
+            boolean positive = !negationPattern.matcher(content).find();
+            
+            ExtractedBelief belief = new ExtractedBelief(statement, agentId, "location", confidence, positive);
+            belief.addTag("location");
+            beliefs.add(belief);
+            System.out.println("SimplePatternBeliefExtractionService: Added location belief: " + statement);
+        } else {
+            System.out.println("SimplePatternBeliefExtractionService: No location pattern matched for content");
         }
     }
 

@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * 
  * @since 1.0
  */
-public class EfficientBeliefGraphQueryService implements BeliefGraphQueryService {
+public class InMemoryBeliefGraphQueryService implements BeliefGraphQueryService {
     
     // Core data storage
     private final Map<String, Belief> beliefs = new ConcurrentHashMap<>();
@@ -47,7 +47,7 @@ public class EfficientBeliefGraphQueryService implements BeliefGraphQueryService
     private volatile long lastCacheUpdate = 0;
     private static final long CACHE_TTL_MS = 60000; // 1 minute cache TTL
     
-    public EfficientBeliefGraphQueryService() {
+    public InMemoryBeliefGraphQueryService() {
         // Initialize with empty state
     }
     
@@ -635,7 +635,7 @@ public class EfficientBeliefGraphQueryService implements BeliefGraphQueryService
     public Map<String, Object> getServiceHealth() {
         Map<String, Object> health = new HashMap<>();
         health.put("status", "healthy");
-        health.put("implementation", "EfficientBeliefGraphQueryService");
+        health.put("implementation", "InMemoryBeliefGraphQueryService");
         health.put("totalBeliefs", beliefs.size());
         health.put("totalRelationships", relationships.size());
         health.put("indexesCount", outgoingRelationshipIndex.size() + incomingRelationshipIndex.size());

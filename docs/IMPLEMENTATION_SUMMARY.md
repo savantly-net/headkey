@@ -85,7 +85,7 @@ GET /api/agents/{agentId}/beliefs/relationships/knowledge-graph
 ## 🔧 Technical Implementation
 
 ### Data Synchronization
-- **Automatic sync** between InMemoryBeliefRelationshipService and EfficientBeliefGraphQueryService
+- **Automatic sync** between InMemoryBeliefRelationshipService and InMemoryBeliefGraphQueryService
 - **Real-time updates** to maintain consistency
 - **Efficient indexing** for fast lookups
 

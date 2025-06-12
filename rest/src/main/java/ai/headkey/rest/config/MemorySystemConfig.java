@@ -4,11 +4,25 @@ import org.jboss.logging.Logger;
 
 import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.implementations.InMemoryBeliefReinforcementConflictAnalyzer;
+import ai.headkey.persistence.services.JpaBeliefStorageService;
 import ai.headkey.memory.implementations.InMemoryContextualCategorizationEngine;
+import ai.headkey.memory.implementations.InformationIngestionModuleImpl;
+import ai.headkey.memory.implementations.SimplePatternBeliefExtractionService;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
+import ai.headkey.memory.interfaces.BeliefRelationshipService;
 import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
+import ai.headkey.persistence.repositories.BeliefRepository;
+import ai.headkey.persistence.repositories.BeliefConflictRepository;
+import ai.headkey.persistence.repositories.BeliefRelationshipRepository;
+import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;
+import ai.headkey.persistence.repositories.impl.JpaBeliefConflictRepository;
+import ai.headkey.persistence.repositories.impl.BeliefRelationshipRepositoryImpl;
+import ai.headkey.persistence.services.JpaBeliefRelationshipService;
+import ai.headkey.memory.langchain4j.LangChain4JBeliefExtractionService;
 import ai.headkey.memory.langchain4j.LangChain4JContextualCategorizationEngine;
+import ai.headkey.memory.spi.BeliefExtractionService;
+import ai.headkey.memory.spi.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
@@ -20,6 +34,7 @@ import ai.headkey.rest.service.LangChain4JVectorEmbeddingGenerator;
 import ai.headkey.rest.service.MemoryDtoMapper;
 import ai.headkey.rest.service.QuarkusCategoryExtractionService;
 import ai.headkey.rest.service.QuarkusTagExtractionService;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -66,6 +81,10 @@ public class MemorySystemConfig {
     @Inject
     @io.quarkus.arc.Unremovable
     jakarta.enterprise.inject.Instance<EmbeddingModel> embeddingModel;
+
+    @Inject
+    @io.quarkus.arc.Unremovable
+    jakarta.enterprise.inject.Instance<ChatModel> chatModel;
 
     /**
      * Produces the JPA-based MemoryEncodingSystem as a CDI bean.
@@ -143,19 +162,66 @@ public class MemorySystemConfig {
     }
 
     /**
+     * Produces the BeliefExtractionService as a CDI bean.
+     *
+     * @return A singleton instance of BeliefExtractionService
+     */
+    @Produces
+    @Singleton
+    public BeliefExtractionService beliefExtractionService() {
+        String apiKey = System.getenv("OPENAI_API_KEY");
+        LOG.infof("OPENAI_API_KEY present: %s", apiKey != null ? "YES" : "NO");
+        LOG.infof("ChatModel satisfied: %s", !chatModel.isUnsatisfied());
+        
+        if (chatModel.isUnsatisfied() || apiKey == null) {
+            LOG.info("ChatModel not available or API key not configured, using SimplePatternBeliefExtractionService");
+            return new SimplePatternBeliefExtractionService();
+        }
+        
+        try {
+            ChatModel model = chatModel.get();
+            LOG.infof("Creating LangChain4JBeliefExtractionService with model: %s", 
+                model.getClass().getSimpleName());
+            return new LangChain4JBeliefExtractionService(model);
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to create LangChain4JBeliefExtractionService, falling back to simple implementation");
+            return new SimplePatternBeliefExtractionService();
+        }
+    }
+
+    /**
+     * Produces the BeliefStorageService as a CDI bean.
+     *
+     * @return A singleton instance of BeliefStorageService
+     */
+    @Produces
+    @Singleton
+    public BeliefStorageService beliefStorageService() {
+        LOG.info("Creating JpaBeliefStorageService");
+        
+        // Create repository dependencies
+        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
+        BeliefConflictRepository conflictRepository = new JpaBeliefConflictRepository(entityManager.getEntityManagerFactory());
+        
+        return new JpaBeliefStorageService(beliefRepository, conflictRepository);
+    }
+
+    /**
      * Produces the BeliefReinforcementConflictAnalyzer as a CDI bean.
      *
-     * @param memorySystem The memory encoding system for belief storage
+     * @param beliefExtractionService The belief extraction service
+     * @param beliefStorageService The belief storage service
      * @return A singleton instance of BeliefReinforcementConflictAnalyzer
      */
     @Produces
     @Singleton
     public BeliefReinforcementConflictAnalyzer beliefReinforcementConflictAnalyzer(
-        JpaMemoryEncodingSystem memorySystem
+        BeliefExtractionService beliefExtractionService,
+        BeliefStorageService beliefStorageService
     ) {
-        LOG.info("Creating InMemoryBeliefReinforcementConflictAnalyzer");
-        // For now using in-memory implementation, could be enhanced with JPA-based storage
-        return new InMemoryBeliefReinforcementConflictAnalyzer();
+        LOG.infof("Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s", 
+            beliefExtractionService.getClass().getSimpleName());
+        return new InMemoryBeliefReinforcementConflictAnalyzer(beliefExtractionService, beliefStorageService);
     }
 
     /**
@@ -180,11 +246,31 @@ public class MemorySystemConfig {
             "Creating InformationIngestionModule using InformationIngestionModuleImpl"
         );
 
-        return new JpaInformationIngestionAdapter(
+        return new InformationIngestionModuleImpl(
             categorizationEngine,
             memorySystem,
             beliefAnalyzer
         );
+    }
+
+    /**
+     * Produces the BeliefRelationshipService as a CDI bean.
+     *
+     * This creates a JPA-based implementation of the belief relationship service
+     * with persistent storage using PostgreSQL.
+     *
+     * @return A singleton instance of BeliefRelationshipService
+     */
+    @Produces
+    @Singleton
+    public BeliefRelationshipService beliefRelationshipService() {
+        LOG.info("Creating JpaBeliefRelationshipService");
+        
+        // Create repository dependencies
+        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
+        BeliefRelationshipRepository relationshipRepository = new BeliefRelationshipRepositoryImpl(entityManager);
+        
+        return new JpaBeliefRelationshipService(relationshipRepository, beliefRepository);
     }
 
     /**

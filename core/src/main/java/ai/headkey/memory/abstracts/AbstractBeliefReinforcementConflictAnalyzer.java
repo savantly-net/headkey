@@ -66,6 +66,10 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
         }
 
         try {
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Starting analysis for memory: " + newMemory.getId());
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Memory content: '" + newMemory.getContent() + "'");
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Extraction service: " + extractionService.getClass().getSimpleName());
+            
             BeliefUpdateResult result = new BeliefUpdateResult();
             result.setAgentId(newMemory.getAgentId());
             result.setAnalysisTimestamp(Instant.now());
@@ -74,18 +78,28 @@ public abstract class AbstractBeliefReinforcementConflictAnalyzer implements Bel
             List<BeliefExtractionService.ExtractedBelief> extractedBeliefs = extractionService.extractBeliefs(
                 newMemory.getContent(), newMemory.getAgentId(), newMemory.getCategory());
 
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Received " + extractedBeliefs.size() + " extracted beliefs from extraction service");
+
             for (BeliefExtractionService.ExtractedBelief extracted : extractedBeliefs) {
+                System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Processing extracted belief: " + extracted.getStatement());
                 processExtractedBelief(extracted, newMemory, result);
             }
 
             // If no beliefs were extracted, create a general memory-based belief
             if (extractedBeliefs.isEmpty()) {
+                System.out.println("AbstractBeliefReinforcementConflictAnalyzer: No beliefs extracted, creating general belief");
                 createGeneralBelief(newMemory, result);
             }
+
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Final result - " + 
+                result.getNewBeliefs().size() + " new beliefs, " + 
+                result.getReinforcedBeliefs().size() + " reinforced beliefs");
 
             totalAnalyses++;
             return result;
         } catch (Exception e) {
+            System.out.println("AbstractBeliefReinforcementConflictAnalyzer: Analysis failed with exception: " + e.getMessage());
+            e.printStackTrace();
             throw new BeliefAnalysisException("Failed to analyze memory: " + e.getMessage(), e);
         }
     }

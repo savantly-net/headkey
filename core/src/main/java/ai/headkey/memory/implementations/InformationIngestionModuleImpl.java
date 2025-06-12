@@ -98,6 +98,11 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
         configuration.put("enableValidation", true);
         configuration.put("enableBeliefAnalysis", true);
         configuration.put("enableCategorization", true);
+        
+        // Log configuration for debugging
+        System.out.println("InformationIngestionModule Configuration:");
+        System.out.println("  enableBeliefAnalysis: " + configuration.get("enableBeliefAnalysis"));
+        System.out.println("  enableCategorization: " + configuration.get("enableCategorization"));
         configuration.put("retryAttempts", 3);
         configuration.put("timeoutSeconds", 30);
     }
@@ -145,7 +150,21 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
             // Step 4: Analyze beliefs
             BeliefUpdateResult beliefResult = null;
             if ((Boolean) configuration.get("enableBeliefAnalysis")) {
+                System.out.println("Analyzing memory for beliefs: " + memoryRecord.getId());
+                System.out.println("Memory content: '" + memoryRecord.getContent() + "'");
                 beliefResult = beliefAnalyzer.analyzeNewMemory(memoryRecord);
+                if (beliefResult != null) {
+                    System.out.println("Belief analysis result: " + 
+                        beliefResult.getNewBeliefs().size() + " new beliefs, " + 
+                        beliefResult.getReinforcedBeliefs().size() + " reinforced beliefs");
+                    for (var belief : beliefResult.getNewBeliefs()) {
+                        System.out.println("  New belief: " + belief.getStatement());
+                    }
+                } else {
+                    System.out.println("Belief analysis returned null result");
+                }
+            } else {
+                System.out.println("Belief analysis is disabled in configuration");
             }
             
             // Step 5: Create and populate result

@@ -42,7 +42,7 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
      */
     public InMemoryBeliefRelationshipService() {
         // Initialize with efficient query service
-        this.queryService = new EfficientBeliefGraphQueryService();
+        this.queryService = new InMemoryBeliefGraphQueryService();
         // Initialize data structures
     }
     
@@ -50,9 +50,9 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
      * Constructor with query service injection.
      */
     public InMemoryBeliefRelationshipService(BeliefGraphQueryService queryService) {
-        this.queryService = queryService != null ? queryService : new EfficientBeliefGraphQueryService();
-        // Synchronize initial data if query service is EfficientBeliefGraphQueryService
-        if (this.queryService instanceof EfficientBeliefGraphQueryService) {
+        this.queryService = queryService != null ? queryService : new InMemoryBeliefGraphQueryService();
+        // Synchronize initial data if query service is InMemoryBeliefGraphQueryService
+        if (this.queryService instanceof InMemoryBeliefGraphQueryService) {
             synchronizeWithQueryService();
         }
     }
@@ -71,8 +71,8 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
      * Synchronizes data with the query service for efficient operations.
      */
     private void synchronizeWithQueryService() {
-        if (queryService instanceof EfficientBeliefGraphQueryService) {
-            EfficientBeliefGraphQueryService efficientService = (EfficientBeliefGraphQueryService) queryService;
+        if (queryService instanceof InMemoryBeliefGraphQueryService) {
+            InMemoryBeliefGraphQueryService efficientService = (InMemoryBeliefGraphQueryService) queryService;
             // Add all beliefs
             for (Belief belief : beliefs.values()) {
                 efficientService.addBelief(belief);
@@ -459,8 +459,8 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
      * Synchronizes a relationship with the query service.
      */
     private void synchronizeRelationshipWithQueryService(BeliefRelationship relationship) {
-        if (queryService instanceof EfficientBeliefGraphQueryService) {
-            EfficientBeliefGraphQueryService efficientService = (EfficientBeliefGraphQueryService) queryService;
+        if (queryService instanceof InMemoryBeliefGraphQueryService) {
+            InMemoryBeliefGraphQueryService efficientService = (InMemoryBeliefGraphQueryService) queryService;
             efficientService.addRelationship(relationship);
         }
     }
@@ -469,8 +469,8 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
      * Removes a relationship from the query service.
      */
     private void removeRelationshipFromQueryService(BeliefRelationship relationship) {
-        if (queryService instanceof EfficientBeliefGraphQueryService) {
-            EfficientBeliefGraphQueryService efficientService = (EfficientBeliefGraphQueryService) queryService;
+        if (queryService instanceof InMemoryBeliefGraphQueryService) {
+            InMemoryBeliefGraphQueryService efficientService = (InMemoryBeliefGraphQueryService) queryService;
             efficientService.removeRelationship(relationship.getId());
         }
     }

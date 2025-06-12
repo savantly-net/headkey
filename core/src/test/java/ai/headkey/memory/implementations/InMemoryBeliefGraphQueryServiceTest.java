@@ -13,9 +13,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class EfficientBeliefGraphQueryServiceTest {
+class InMemoryBeliefGraphQueryServiceTest {
 
-    private EfficientBeliefGraphQueryService service;
+    private InMemoryBeliefGraphQueryService service;
     private Belief testBelief1;
     private Belief testBelief2;
     private BeliefRelationship testRelationship;
@@ -23,7 +23,7 @@ class EfficientBeliefGraphQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EfficientBeliefGraphQueryService();
+        service = new InMemoryBeliefGraphQueryService();
         
         // Create test beliefs
         testBelief1 = new Belief();
@@ -221,7 +221,7 @@ class EfficientBeliefGraphQueryServiceTest {
         
         assertNotNull(health);
         assertEquals("healthy", health.get("status"));
-        assertEquals("EfficientBeliefGraphQueryService", health.get("implementation"));
+        assertEquals("InMemoryBeliefGraphQueryService", health.get("implementation"));
         assertEquals(2, health.get("totalBeliefs"));
         assertEquals(1, health.get("totalRelationships"));
         assertTrue(health.containsKey("indexesCount"));
