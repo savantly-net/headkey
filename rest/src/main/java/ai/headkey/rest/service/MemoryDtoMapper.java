@@ -93,6 +93,11 @@ public class MemoryDtoMapper {
             response.setPreviewData(result.getPreviewData());
         }
         
+        // Set belief update result if available
+        if (result.getBeliefUpdateResult() != null) {
+            response.setBeliefUpdateResult(result.getBeliefUpdateResult());
+        }
+        
         // Handle error cases
         if (result.getStatus() == Status.ERROR) {
             response.setErrorMessage(result.getErrorMessage());

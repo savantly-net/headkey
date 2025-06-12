@@ -1,5 +1,6 @@
 package ai.headkey.rest.dto;
 
+import ai.headkey.memory.dto.BeliefUpdateResult;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -90,6 +91,12 @@ public class MemoryIngestionResponse {
      */
     @JsonProperty("error_details")
     private Map<String, Object> errorDetails;
+    
+    /**
+     * Result of belief analysis performed during ingestion.
+     */
+    @JsonProperty("belief_update_result")
+    private BeliefUpdateResult beliefUpdateResult;
     
     /**
      * Default constructor.
@@ -260,6 +267,14 @@ public class MemoryIngestionResponse {
         this.errorDetails = errorDetails;
     }
     
+    public BeliefUpdateResult getBeliefUpdateResult() {
+        return beliefUpdateResult;
+    }
+    
+    public void setBeliefUpdateResult(BeliefUpdateResult beliefUpdateResult) {
+        this.beliefUpdateResult = beliefUpdateResult;
+    }
+    
     @Override
     public String toString() {
         return "MemoryIngestionResponse{" +
@@ -275,6 +290,7 @@ public class MemoryIngestionResponse {
                 ", timestamp=" + timestamp +
                 ", errorMessage='" + errorMessage + '\'' +
                 ", errorDetails=" + errorDetails +
+                ", beliefUpdateResult=" + beliefUpdateResult +
                 '}';
     }
     

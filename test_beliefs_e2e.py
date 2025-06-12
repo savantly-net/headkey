@@ -128,6 +128,33 @@ class HeadKeyTester:
             confidence = belief.get('confidence', 'N/A')
             print(f"      • ID: {belief_id} | Statement: {statement} | Confidence: {confidence}")
             
+    def display_knowledge_graph(self, knowledge_graph: Optional[Dict]):
+        """Display beliefs and relationships from a knowledge graph structure"""
+        if not knowledge_graph:
+            print("   📋 Knowledge Graph: No data available")
+            return
+            
+        beliefs = knowledge_graph.get('beliefs', {})
+        relationships = knowledge_graph.get('relationships', {})
+        
+        if not beliefs:
+            print("   📋 Knowledge Graph: 0 beliefs")
+            return
+            
+        count = len(beliefs)
+        print(f"   📋 Knowledge Graph: {count} beliefs")
+        
+        for belief_id, belief in beliefs.items():
+            statement = belief.get('statement', 'N/A')
+            confidence = belief.get('confidence', 'N/A')
+            active = belief.get('active', True)
+            status = "Active" if active else "Inactive"
+            print(f"      • ID: {belief_id} | Statement: {statement} | Confidence: {confidence} | Status: {status}")
+            
+        if relationships:
+            rel_count = len(relationships)
+            print(f"   🔗 Relationships: {rel_count}")
+            
     def display_conflicts(self, conflicts: List[Dict]):
         """Display conflict details"""
         if not conflicts:
@@ -338,13 +365,16 @@ class HeadKeyTester:
             self.print_error(f"Statistics request failed: {e}")
             return None
             
-    def query_agent_beliefs(self) -> Optional[Dict]:
-        """Query beliefs for the agent"""
+    def query_agent_beliefs(self, include_inactive: bool = False) -> Optional[Dict]:
+        """Query beliefs for the agent using the knowledge graph snapshot"""
         self.print_section("🔍 Querying Agent's Beliefs")
         print(f"Checking beliefs for agent: {self.agent_id}")
         
-        # Try to query beliefs using the belief relationship endpoint
-        belief_url = f"{self.base_url}/api/v1/agents/{self.agent_id}/belief-relationships"
+        # Use the snapshot-graph endpoint to get beliefs and relationships
+        belief_url = f"{self.base_url}/api/v1/agents/{self.agent_id}/belief-relationships/snapshot-graph"
+        if include_inactive:
+            belief_url += "?includeInactive=true"
+            print("Including inactive beliefs and relationships")
         
         try:
             req = urllib.request.Request(belief_url, headers=self.headers)
@@ -352,18 +382,18 @@ class HeadKeyTester:
                 if response.status == 200:
                     response_data = response.read().decode('utf-8')
                     response_json = json.loads(response_data)
-                    self.print_success("Retrieved agent's belief relationships")
+                    self.print_success("Retrieved agent's knowledge graph snapshot")
                     print(json.dumps(response_json, indent=2))
                     return response_json
                 else:
-                    self.print_warning("Belief query endpoint not available or accessible")
+                    self.print_warning("Knowledge graph snapshot endpoint not available or accessible")
                     return None
-        except Exception:
-            self.print_warning("Belief query endpoint not available or accessible")
+        except Exception as e:
+            self.print_warning(f"Knowledge graph snapshot endpoint not available or accessible: {str(e)}")
             return None
             
     def print_test_summary(self, content_length: int, dry_run_result: Optional[Dict], 
-                          ingest_result: Optional[Dict]):
+                          ingest_result: Optional[Dict], knowledge_graph: Optional[Dict] = None):
         """Print comprehensive test summary"""
         self.print_header("🎉 End-to-End Belief Analysis Test Complete!", Colors.GREEN)
         
@@ -390,6 +420,14 @@ class HeadKeyTester:
             # Show memory ID if available
             memory_id = ingest_result.get('memory_id', 'N/A')
             print(f"   • Memory ID: {memory_id}")
+            
+        # Display knowledge graph stats if available
+        if knowledge_graph:
+            beliefs = knowledge_graph.get('beliefs', {})
+            relationships = knowledge_graph.get('relationships', {})
+            print(f"\n🕸️ Knowledge Graph Status:")
+            print(f"   • Total Beliefs in Graph: {len(beliefs)}")
+            print(f"   • Total Relationships: {len(relationships)}")
             
         print(f"\n💡 Next Steps:")
         print(f"   • Review the beliefs created from the Dune chapter content")
@@ -440,13 +478,15 @@ class HeadKeyTester:
                 self.analyze_belief_results(ingest_result, "Actual Ingestion")
                 
             # Step 6: Query agent beliefs
-            self.query_agent_beliefs()
+            knowledge_graph = self.query_agent_beliefs()
+            if knowledge_graph:
+                self.display_knowledge_graph(knowledge_graph)
             
             # Step 7: Get final statistics
             self.get_system_statistics()
             
             # Step 8: Print summary
-            self.print_test_summary(len(content), dry_run_result, ingest_result)
+            self.print_test_summary(len(content), dry_run_result, ingest_result, knowledge_graph)
             
             return True
             

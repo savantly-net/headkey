@@ -151,13 +151,14 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public ContextualCategorizationEngine contextualCategorizationEngine(QuarkusCategoryExtractionService categoryService, QuarkusTagExtractionService tagService) {
-        LOG.info("Creating InMemoryContextualCategorizationEngine");
-        if (System.getenv("OPENAI_API_KEY") == null) {
-            LOG.warn("OPENAI_API_KEY environment variable not set");
+        LOG.info("Creating ContextualCategorizationEngine");
+        if (chatModel.isUnsatisfied()) {
+            LOG.info("ChatModel not available, using InMemoryContextualCategorizationEngine");
             return new InMemoryContextualCategorizationEngine();
         }
 
         // Initialize the categorization engine
+        LOG.info("Creating LangChain4JContextualCategorizationEngine");
         return new LangChain4JContextualCategorizationEngine(categoryService, tagService);
     }
 
@@ -169,12 +170,8 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public BeliefExtractionService beliefExtractionService() {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        LOG.infof("OPENAI_API_KEY present: %s", apiKey != null ? "YES" : "NO");
-        LOG.infof("ChatModel satisfied: %s", !chatModel.isUnsatisfied());
-        
-        if (chatModel.isUnsatisfied() || apiKey == null) {
-            LOG.info("ChatModel not available or API key not configured, using SimplePatternBeliefExtractionService");
+        if (chatModel.isUnsatisfied()) {
+            LOG.info("ChatModel not available, using SimplePatternBeliefExtractionService");
             return new SimplePatternBeliefExtractionService();
         }
         
