@@ -1,0 +1,208 @@
+/* Enhanced UI Styling for HeadKey UI */
+
+/* Soft shadows for cards and containers */
+.shadow-soft {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.3s ease;
+}
+
+.shadow-soft:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08), 0 8px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Medium soft shadow for important elements */
+.shadow-medium {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.shadow-medium:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 10px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Soft borders */
+.border-soft {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .border-soft {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Softer card styling */
+.card-soft {
+  background-color: rgba(255, 255, 255, 1);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card-soft:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.dark .card-soft {
+  background-color: rgba(30, 30, 30, 1);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Soft dividers */
+.divider-soft {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  margin: 1rem 0;
+}
+
+.dark .divider-soft {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Soft inputs */
+.input-soft {
+  background-color: rgba(255, 255, 255, 1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.input-soft:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.dark .input-soft {
+  background-color: rgba(30, 30, 30, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Soft buttons */
+.button-soft {
+  background-color: rgba(255, 255, 255, 1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.button-soft:hover {
+  background-color: rgba(249, 250, 251, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.dark .button-soft {
+  background-color: rgba(30, 30, 30, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Enhanced UI for navigation items */
+.nav-item-soft {
+  transition: all 0.2s ease;
+  border-radius: var(--radius);
+}
+
+.nav-item-soft:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.nav-item-soft.active {
+  background-color: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .nav-item-soft:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark .nav-item-soft.active {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+/* Glass effect containers */
+.glass-container {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-container {
+  background: rgba(30, 30, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Soft glow effect */
+.glow-soft {
+  position: relative;
+}
+
+.glow-soft::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.15);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glow-soft:hover::after {
+  opacity: 1;
+}
+
+/* Soft panel */
+.panel-soft {
+  background-color: rgba(250, 250, 250, 1);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.dark .panel-soft {
+  background-color: rgba(35, 35, 35, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Soft badge */
+.badge-soft {
+  background-color: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.badge-soft:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.dark .badge-soft {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .badge-soft:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Utility classes for uniform rounded corners */
+.rounded-soft {
+  border-radius: var(--radius);
+}
+
+.rounded-soft-lg {
+  border-radius: calc(var(--radius) + 2px);
+}
+
+.rounded-soft-xl {
+  border-radius: calc(var(--radius) + 4px);
+}

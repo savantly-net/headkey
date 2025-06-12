@@ -1,0 +1,530 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import {
+  systemApi,
+  beliefApi,
+  handleApiError,
+  type SystemHealth,
+  type SystemStatistics,
+  type BeliefStatistics,
+} from "@/lib/api";
+import {
+  Activity,
+  Database,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  RefreshCw,
+  Brain,
+  Clock,
+  Zap,
+  BarChart3,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+
+interface DashboardStatsProps {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+}
+
+export function DashboardStats({
+  autoRefresh = true,
+  refreshInterval = 30000,
+}: DashboardStatsProps) {
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [statistics, setStatistics] = useState<SystemStatistics | null>(null);
+  const [beliefStats, setBeliefStats] = useState<BeliefStatistics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  const fetchDashboardData = async () => {
+    console.log("Fetching dashboard data...");
+    try {
+      const [healthData, statsData] = await Promise.all([
+        systemApi.getComprehensiveHealth(),
+        systemApi.getStatistics(),
+      ]);
+
+      console.log("Health data:", healthData);
+      console.log("Statistics data:", statsData);
+
+      setHealth(healthData);
+      setStatistics(statsData);
+
+      // Try to fetch belief statistics for default agent
+      try {
+        const beliefData = await beliefApi.getStatistics("default-agent");
+        console.log("Belief data:", beliefData);
+        setBeliefStats(beliefData);
+      } catch (beliefError) {
+        console.log("Belief stats not available:", beliefError);
+        setBeliefStats(null);
+      }
+
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      const apiError = handleApiError(error);
+      toast.error(`Failed to fetch dashboard data: ${apiError.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+
+    if (autoRefresh) {
+      const interval = setInterval(fetchDashboardData, refreshInterval);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, refreshInterval]);
+
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
+  };
+
+  const formatNumber = (num: number) => {
+    return num ? num.toLocaleString() : "0";
+  };
+
+  const getSystemStatus = () => {
+    if (!health)
+      return {
+        status: "checking",
+        icon: AlertCircle,
+        color: "text-yellow-600",
+      };
+
+    if (health.status === "UP") {
+      return { status: "online", icon: CheckCircle, color: "text-green-600" };
+    } else {
+      return { status: "offline", icon: XCircle, color: "text-red-600" };
+    }
+  };
+
+  const getStatusBadge = () => {
+    const systemStatus = getSystemStatus();
+
+    switch (systemStatus.status) {
+      case "checking":
+        return (
+          <Badge
+            variant="secondary"
+            className="bg-yellow-100 text-yellow-800 border-yellow-200"
+          >
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Checking...
+          </Badge>
+        );
+      case "online":
+        return (
+          <Badge
+            variant="default"
+            className="bg-green-100 text-green-800 border-green-200"
+          >
+            <Wifi className="h-3 w-3 mr-1" />
+            Online
+          </Badge>
+        );
+      case "offline":
+        return (
+          <Badge
+            variant="destructive"
+            className="bg-red-100 text-red-800 border-red-200"
+          >
+            <WifiOff className="h-3 w-3 mr-1" />
+            Offline
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-[100px]" />
+              <Skeleton className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-[60px] mb-2" />
+              <Skeleton className="h-3 w-[120px]" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold">System Dashboard</h2>
+          {getStatusBadge()}
+        </div>
+        <div className="flex items-center gap-2">
+          {lastUpdate && (
+            <span className="text-sm text-muted-foreground">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchDashboardData}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {/* Total Memories */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Memories
+            </CardTitle>
+            <Brain className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statistics
+                ? formatNumber(statistics.memorySystem.totalMemories)
+                : "0"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Stored in memory system
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Beliefs */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Active Beliefs
+            </CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {beliefStats ? formatNumber(beliefStats.activeBeliefs) : "N/A"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {beliefStats
+                ? `${formatNumber(beliefStats.totalBeliefs)} total`
+                : "Beliefs not available"}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Total Operations */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Operations
+            </CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statistics
+                ? formatNumber(statistics.memorySystem.totalOperations)
+                : "0"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              All-time operations count
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* System Uptime */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statistics
+                ? formatUptime(statistics.memorySystem.uptimeSeconds)
+                : "0m"}
+            </div>
+            <p className="text-xs text-muted-foreground">Since last restart</p>
+          </CardContent>
+        </Card>
+
+        {/* Database Status */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Database</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statistics?.database.entityManagerFactoryOpen ? (
+                <span className="text-green-600">Active</span>
+              ) : (
+                <span className="text-red-600">Inactive</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {statistics?.database.configuredDatabaseKind || "Unknown"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Memory System Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Memory System
+            </CardTitle>
+            <CardDescription>Detailed memory system statistics</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-sm">Total Searches:</span>
+              <span className="font-medium">
+                {statistics
+                  ? formatNumber(statistics.memorySystem.totalSearches)
+                  : "0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Total Updates:</span>
+              <span className="font-medium">
+                {statistics
+                  ? formatNumber(statistics.memorySystem.totalUpdates)
+                  : "0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Total Deletes:</span>
+              <span className="font-medium">
+                {statistics
+                  ? formatNumber(statistics.memorySystem.totalDeletes)
+                  : "0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Batch Size:</span>
+              <span className="font-medium">
+                {statistics ? statistics.memorySystem.batchSize : "0"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Belief System Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Belief System
+            </CardTitle>
+            <CardDescription>
+              Agent belief formation and relationships
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {beliefStats ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm">Total Relationships:</span>
+                  <span className="font-medium">
+                    {formatNumber(beliefStats.totalRelationships)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">High Confidence:</span>
+                  <span className="font-medium">
+                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.high)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Medium Confidence:</span>
+                  <span className="font-medium">
+                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.medium)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Low Confidence:</span>
+                  <span className="font-medium">
+                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.low)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">
+                  Belief statistics not available
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Requires agent with beliefs
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Search Strategy */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Search Strategy
+            </CardTitle>
+            <CardDescription>
+              Current similarity search configuration
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-sm">Strategy:</span>
+              <span className="font-medium">
+                {statistics?.strategy.name || "Unknown"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Vector Search:</span>
+              <Badge
+                variant={
+                  statistics?.strategy.supportsVectorSearch
+                    ? "default"
+                    : "secondary"
+                }
+              >
+                {statistics?.strategy.supportsVectorSearch
+                  ? "Supported"
+                  : "Not Supported"}
+              </Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Similarity Threshold:</span>
+              <span className="font-medium">
+                {statistics
+                  ? statistics.memorySystem.similarityThreshold
+                  : "0.0"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Max Results:</span>
+              <span className="font-medium">
+                {statistics
+                  ? formatNumber(
+                      statistics.memorySystem.maxSimilaritySearchResults,
+                    )
+                  : "0"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Performance Indicators */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Performance Indicators
+          </CardTitle>
+          <CardDescription>
+            System performance and configuration status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="text-sm font-medium">Second Level Cache</p>
+                <p className="text-xs text-muted-foreground">
+                  Hibernate caching
+                </p>
+              </div>
+              <Badge
+                variant={
+                  statistics?.memorySystem.secondLevelCacheEnabled
+                    ? "default"
+                    : "secondary"
+                }
+              >
+                {statistics?.memorySystem.secondLevelCacheEnabled
+                  ? "Enabled"
+                  : "Disabled"}
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="text-sm font-medium">Managed Entities</p>
+                <p className="text-xs text-muted-foreground">
+                  JPA entity types
+                </p>
+              </div>
+              <span className="font-bold">
+                {statistics ? statistics.memorySystem.managedTypes : "0"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="text-sm font-medium">System Started</p>
+                <p className="text-xs text-muted-foreground">
+                  Startup timestamp
+                </p>
+              </div>
+              <span className="text-sm font-medium">
+                {statistics
+                  ? new Date(
+                      statistics.memorySystem.startTime,
+                    ).toLocaleDateString()
+                  : "Unknown"}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

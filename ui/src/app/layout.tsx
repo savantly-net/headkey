@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/toast-config";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 
 export const metadata: Metadata = {
   title: "HeadKey - AI Memory Management System",
@@ -38,8 +40,21 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="antialiased bg-gray-50 text-gray-900">
-        <main className="min-h-screen">{children}</main>
-        <Toaster />
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full">
+            <AppSidebar />
+            <main className="flex-1 flex flex-col">
+              <div className="flex items-center gap-4 p-4 border-b border-gray-200 bg-white">
+                <SidebarTrigger />
+                <h3 className="font-semibold">
+                  HeadKey - AI Memory Management
+                </h3>
+              </div>
+              <div className="flex-1 p-6">{children}</div>
+            </main>
+            <Toaster />
+          </div>
+        </SidebarProvider>
       </body>
     </html>
   );
