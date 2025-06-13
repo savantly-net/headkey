@@ -1,6 +1,6 @@
 package ai.headkey.rest.config;
 
-import org.jboss.logging.Logger;
+import io.quarkus.logging.Log;
 
 import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.implementations.InMemoryBeliefReinforcementConflictAnalyzer;
@@ -68,10 +68,6 @@ import jakarta.persistence.EntityManager;
 @ApplicationScoped
 public class MemorySystemConfig {
 
-    private static final Logger LOG = Logger.getLogger(
-        MemorySystemConfig.class
-    );
-
     @Inject
     EntityManager entityManager;
 
@@ -98,7 +94,7 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public JpaMemoryEncodingSystem jpaMemoryEncodingSystem() {
-        LOG.info("Initializing JpaMemoryEncodingSystem for CDI");
+        Log.info("Initializing JpaMemoryEncodingSystem for CDI");
 
         try {
             // Create LangChain4J embedding generator
@@ -125,13 +121,13 @@ public class MemorySystemConfig {
                     .similarityThreshold(properties.similarityThreshold())
                     .build();
 
-            LOG.infof(
+            Log.infof(
                 "JpaMemoryEncodingSystem successfully initialized with strategy: %s",
                 strategy.getStrategyName()
             );
             return memorySystem;
         } catch (Exception e) {
-            LOG.errorf(
+            Log.errorf(
                 e,
                 "Failed to initialize JpaMemoryEncodingSystem: %s",
                 e.getMessage()
@@ -151,14 +147,14 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public ContextualCategorizationEngine contextualCategorizationEngine(QuarkusCategoryExtractionService categoryService, QuarkusTagExtractionService tagService) {
-        LOG.info("Creating ContextualCategorizationEngine");
+        Log.info("Creating ContextualCategorizationEngine");
         if (chatModel.isUnsatisfied()) {
-            LOG.info("ChatModel not available, using InMemoryContextualCategorizationEngine");
+            Log.info("ChatModel not available, using InMemoryContextualCategorizationEngine");
             return new InMemoryContextualCategorizationEngine();
         }
 
         // Initialize the categorization engine
-        LOG.info("Creating LangChain4JContextualCategorizationEngine");
+        Log.info("Creating LangChain4JContextualCategorizationEngine");
         return new LangChain4JContextualCategorizationEngine(categoryService, tagService);
     }
 
@@ -171,17 +167,17 @@ public class MemorySystemConfig {
     @Singleton
     public BeliefExtractionService beliefExtractionService() {
         if (chatModel.isUnsatisfied()) {
-            LOG.info("ChatModel not available, using SimplePatternBeliefExtractionService");
+            Log.info("ChatModel not available, using SimplePatternBeliefExtractionService");
             return new SimplePatternBeliefExtractionService();
         }
         
         try {
             ChatModel model = chatModel.get();
-            LOG.infof("Creating LangChain4JBeliefExtractionService with model: %s", 
+            Log.infof("Creating LangChain4JBeliefExtractionService with model: %s", 
                 model.getClass().getSimpleName());
             return new LangChain4JBeliefExtractionService(model);
         } catch (Exception e) {
-            LOG.errorf(e, "Failed to create LangChain4JBeliefExtractionService, falling back to simple implementation");
+            Log.errorf(e, "Failed to create LangChain4JBeliefExtractionService, falling back to simple implementation");
             return new SimplePatternBeliefExtractionService();
         }
     }
@@ -194,7 +190,7 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public BeliefStorageService beliefStorageService() {
-        LOG.info("Creating JpaBeliefStorageService");
+        Log.info("Creating JpaBeliefStorageService");
         
         // Create repository dependencies
         BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
@@ -216,7 +212,7 @@ public class MemorySystemConfig {
         BeliefExtractionService beliefExtractionService,
         BeliefStorageService beliefStorageService
     ) {
-        LOG.infof("Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s", 
+        Log.infof("Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s", 
             beliefExtractionService.getClass().getSimpleName());
         return new InMemoryBeliefReinforcementConflictAnalyzer(beliefExtractionService, beliefStorageService);
     }
@@ -239,7 +235,7 @@ public class MemorySystemConfig {
         JpaMemoryEncodingSystem memorySystem,
         BeliefReinforcementConflictAnalyzer beliefAnalyzer
     ) {
-        LOG.info(
+        Log.info(
             "Creating InformationIngestionModule using InformationIngestionModuleImpl"
         );
 
@@ -261,7 +257,7 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public BeliefRelationshipService beliefRelationshipService() {
-        LOG.info("Creating JpaBeliefRelationshipService");
+        Log.info("Creating JpaBeliefRelationshipService");
         
         // Create repository dependencies
         BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
@@ -281,7 +277,7 @@ public class MemorySystemConfig {
     @Produces
     @Singleton
     public MemoryDtoMapper memoryDtoMapper() {
-        LOG.debug("Creating MemoryDtoMapper bean");
+        Log.debug("Creating MemoryDtoMapper bean");
         return new MemoryDtoMapper();
     }
 
@@ -292,7 +288,7 @@ public class MemorySystemConfig {
      */
     private JpaSimilaritySearchStrategy createSimilaritySearchStrategy() {
         String strategyName = properties.strategy();
-        LOG.infof("Creating similarity search strategy: %s", strategyName);
+        Log.infof("Creating similarity search strategy: %s", strategyName);
 
         switch (strategyName.toLowerCase()) {
             case "auto":
@@ -308,7 +304,7 @@ public class MemorySystemConfig {
             case "postgres":
                 return new PostgresJpaSimilaritySearchStrategy();
             default:
-                LOG.warnf(
+                Log.warnf(
                     "Unknown strategy '%s', falling back to auto-detection",
                     strategyName
                 );
@@ -328,17 +324,17 @@ public class MemorySystemConfig {
      */
     private AbstractMemoryEncodingSystem.VectorEmbeddingGenerator createLangChain4JEmbeddingGenerator() {
         if (!properties.embedding().enabled()) {
-            LOG.info("Vector embedding generation disabled by configuration");
+            Log.info("Vector embedding generation disabled by configuration");
             return createFallbackEmbeddingGenerator();
         }
 
         if (embeddingModel.isUnsatisfied()) {
-            LOG.warn("No EmbeddingModel bean available, falling back to mock generator");
+            Log.warn("No EmbeddingModel bean available, falling back to mock generator");
             return createFallbackEmbeddingGenerator();
         }
 
         EmbeddingModel model = embeddingModel.get();
-        LOG.infof(
+        Log.infof(
             "Creating LangChain4J embedding generator with model: %s",
             model.getClass().getSimpleName()
         );
@@ -346,7 +342,7 @@ public class MemorySystemConfig {
         try {
             return new LangChain4JVectorEmbeddingGenerator(model);
         } catch (Exception e) {
-            LOG.errorf(
+            Log.errorf(
                 e,
                 "Failed to create LangChain4J embedding generator, falling back to mock generator"
             );
@@ -362,7 +358,7 @@ public class MemorySystemConfig {
      * @return A simple mock embedding generator
      */
     private AbstractMemoryEncodingSystem.VectorEmbeddingGenerator createFallbackEmbeddingGenerator() {
-        LOG.warn(
+        Log.warn(
             "Using fallback mock embedding generator - not suitable for production"
         );
 

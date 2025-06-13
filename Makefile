@@ -28,6 +28,9 @@ run:
 	docker compose up -d
 	./gradlew rest:quarkusDev -Dquarkus.profile=prod
 
+.PHONY: dev
+dev: run
+
 
 .PHONY: test
 test:

@@ -4,6 +4,9 @@ import ai.headkey.memory.dto.MemoryRecord;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Default JPA similarity search strategy that delegates to specialized implementations.
  * 
@@ -20,6 +23,8 @@ import java.util.List;
  * @since 1.0
  */
 public class DefaultJpaSimilaritySearchStrategy implements JpaSimilaritySearchStrategy {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultJpaSimilaritySearchStrategy.class);
     
     private JpaSimilaritySearchStrategy delegateStrategy;
     private boolean isInitialized = false;
@@ -39,6 +44,9 @@ public class DefaultJpaSimilaritySearchStrategy implements JpaSimilaritySearchSt
                                           double[] queryVector, String agentId, int limit,
                                           int maxSimilaritySearchResults, double similarityThreshold) throws Exception {
         
+        log.debug("Executing similarity search with queryContent: {}, agentId: {}, limit: {}, " +
+                         "maxResults: {}, similarityThreshold: {}", queryContent, agentId, limit, 
+                         maxSimilaritySearchResults, similarityThreshold);
         ensureInitialized(entityManager);
         
         return delegateStrategy.searchSimilar(entityManager, queryContent, queryVector, 
@@ -49,6 +57,7 @@ public class DefaultJpaSimilaritySearchStrategy implements JpaSimilaritySearchSt
     public boolean supportsVectorSearch() {
         if (!isInitialized) {
             // Conservative default - will be updated after initialization
+            log.warn("DefaultJpaSimilaritySearchStrategy is not initialized. Assuming no vector search support.");
             return false;
         }
         return delegateStrategy.supportsVectorSearch();
@@ -148,6 +157,8 @@ public class DefaultJpaSimilaritySearchStrategy implements JpaSimilaritySearchSt
             }
             
             // Initialize the delegate strategy
+            log.info("Initializing {} strategy for database type: {}", 
+                     delegateStrategy.getStrategyName(), databaseType);
             delegateStrategy.initialize(entityManager);
             isInitialized = true;
             

@@ -210,10 +210,10 @@ class JpaMemorySystemIntegrationTest {
                 .statusCode(201)
                 .contentType(ContentType.JSON)
                 .body("success", is(true))
-                .body("memoryId", notNullValue())
-                .body("agentId", is("test-agent-jpa"))
+                .body("memory_id", notNullValue())
+                .body("agent_id", is("test-agent-jpa"))
                 .body("category", notNullValue())
-                .body("processingTimeMs", notNullValue());
+                .body("processing_time_ms", notNullValue());
                 
         System.out.println("✅ Memory ingestion working with JPA backend");
     }
@@ -237,11 +237,11 @@ class JpaMemorySystemIntegrationTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body("success", is(true))
-                .body("memoryId", startsWith("dry-run-"))
-                .body("agentId", is("test-agent-dry-run"))
+                .body("memory_id", startsWith("dry-run-"))
+                .body("agent_id", is("test-agent-dry-run"))
                 .body("category", notNullValue())
-                .body("dryRun", is(true))
-                .body("processingTimeMs", notNullValue());
+                .body("dry_run", is(true))
+                .body("processing_time_ms", notNullValue());
                 
         System.out.println("✅ Dry run ingestion working with JPA backend");
     }

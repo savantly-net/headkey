@@ -38,12 +38,13 @@ public interface QuarkusTagAiService extends LangChain4jTagAiService {
         
         Example response:
         {
-          "tags": ["John Doe", "software engineer", "Python", "San Francisco"],
+          "tags": ["John Doe", "software engineer", "Python", "Fort Worth, Texas"],
           "entities": {
             "person": ["John Doe"],
             "profession": ["software engineer"],
             "technology": ["Python"],
-            "location": ["San Francisco"]
+            "location": ["Fort Worth, Texas"],
+            "organization": ["Savantly"],
           }
         }
         
