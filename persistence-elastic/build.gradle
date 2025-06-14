@@ -14,20 +14,6 @@ dependencies {
     api 'dev.langchain4j:langchain4j'
     api 'dev.langchain4j:langchain4j-core'
 
-    // JPA/Hibernate dependencies
-    api 'jakarta.persistence:jakarta.persistence-api:3.1.0'
-    api 'org.hibernate:hibernate-core:6.4.4.Final'
-    api 'org.hibernate:hibernate-hikaricp:6.4.4.Final'
-    api 'org.hibernate.orm:hibernate-vector:6.4.4.Final'
-
-    // PostgreSQL driver
-    api 'org.postgresql:postgresql:42.7.2'
-
-    // Connection pooling
-    api 'com.zaxxer:HikariCP:5.0.1'
-
-    // Transaction support
-    api 'jakarta.transaction:jakarta.transaction-api:2.0.1'
 
     // Bean Validation
     api 'jakarta.validation:jakarta.validation-api:3.0.2'
@@ -43,15 +29,12 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    
+
     // TestContainers for integration tests
     testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
-    testImplementation 'org.testcontainers:postgresql:1.19.3'
     testImplementation 'org.testcontainers:testcontainers:1.19.3'
-    
-    // Test database
-    testImplementation 'com.h2database:h2:2.2.224'
-    
+
+
     // Mockito for unit tests
     testImplementation 'org.mockito:mockito-core:5.8.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'

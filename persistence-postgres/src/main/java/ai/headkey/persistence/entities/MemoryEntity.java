@@ -69,7 +69,6 @@ public class MemoryEntity {
     @Column(name = "agent_id", nullable = false, length = 100)
     private String agentId;
     
-    @Lob
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
     

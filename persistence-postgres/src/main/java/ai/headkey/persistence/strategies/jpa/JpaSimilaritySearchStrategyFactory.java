@@ -5,6 +5,8 @@ import jakarta.persistence.Query;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 
+import org.jboss.logging.Logger;
+
 /**
  * Factory for creating appropriate JPA similarity search strategies based on database capabilities.
  * 
@@ -19,6 +21,8 @@ import java.sql.DatabaseMetaData;
  * @since 1.0
  */
 public class JpaSimilaritySearchStrategyFactory {
+
+    private static final Logger log = Logger.getLogger(JpaSimilaritySearchStrategyFactory.class);
     
     /**
      * Creates the most appropriate similarity search strategy for the given EntityManager.
@@ -27,6 +31,7 @@ public class JpaSimilaritySearchStrategyFactory {
      * @return The most suitable JpaSimilaritySearchStrategy implementation
      */
     public static JpaSimilaritySearchStrategy createStrategy(EntityManager entityManager) {
+        log.info("Creating JPA similarity search strategy based on database capabilities");
         try {
             DatabaseType dbType = detectDatabaseType(entityManager);
             
@@ -50,6 +55,7 @@ public class JpaSimilaritySearchStrategyFactory {
      * @return JpaSimilaritySearchStrategy for the specified database type
      */
     public static JpaSimilaritySearchStrategy createStrategy(EntityManager entityManager, DatabaseType databaseType) {
+        log.infof("Creating JPA similarity search strategy for database type: {}", databaseType);
         switch (databaseType) {
             case POSTGRESQL:
                 return createPostgreSQLStrategy(entityManager);
@@ -68,10 +74,12 @@ public class JpaSimilaritySearchStrategyFactory {
      * Creates a PostgreSQL-specific strategy with proper initialization.
      */
     private static JpaSimilaritySearchStrategy createPostgreSQLStrategy(EntityManager entityManager) {
+        log.info("Creating PostgreSQL JPA similarity search strategy");
         PostgresJpaSimilaritySearchStrategy strategy = new PostgresJpaSimilaritySearchStrategy();
         try {
             strategy.initialize(entityManager);
         } catch (Exception e) {
+            log.warn("Failed to initialize PostgreSQL JPA similarity search strategy, falling back to text-based strategy", e);
             // If PostgreSQL strategy fails to initialize, fall back to text-based strategy
             return new TextBasedJpaSimilaritySearchStrategy();
         }
@@ -82,6 +90,7 @@ public class JpaSimilaritySearchStrategyFactory {
      * Detects the database type from the EntityManager.
      */
     private static DatabaseType detectDatabaseType(EntityManager entityManager) {
+        log.info("Detecting database type from EntityManager");
         try {
             // Get the underlying connection to check database type
             Connection connection = entityManager.unwrap(Connection.class);
@@ -178,6 +187,7 @@ public class JpaSimilaritySearchStrategyFactory {
      * @return DatabaseCapabilities object with feature information
      */
     public static DatabaseCapabilities analyzeDatabaseCapabilities(EntityManager entityManager) {
+        log.info("Analyzing database capabilities for similarity search");
         DatabaseType dbType = detectDatabaseType(entityManager);
         boolean vectorSupport = false;
         boolean fullTextSupport = false;
@@ -205,21 +215,27 @@ public class JpaSimilaritySearchStrategyFactory {
     }
     
     private static boolean checkPostgreSQLVectorSupport(EntityManager entityManager) {
+        log.debug("Checking PostgreSQL vector support");
         try {
             Query query = entityManager.createNativeQuery("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
             query.getSingleResult();
+            log.info("PostgreSQL vector support is enabled");
             return true;
         } catch (Exception e) {
+            log.warn("PostgreSQL vector support is not enabled", e);
             return false;
         }
     }
     
     private static boolean checkPostgreSQLFullTextSupport(EntityManager entityManager) {
+        log.debug("Checking PostgreSQL full-text search support");
         try {
             Query query = entityManager.createNativeQuery("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'");
             query.getSingleResult();
+            log.info("PostgreSQL full-text search support is enabled");
             return true;
         } catch (Exception e) {
+            log.warn("PostgreSQL full-text search support is not enabled", e);
             return false;
         }
     }

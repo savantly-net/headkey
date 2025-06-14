@@ -8,6 +8,7 @@ import ai.headkey.persistence.services.JpaBeliefStorageService;
 import ai.headkey.memory.implementations.InMemoryContextualCategorizationEngine;
 import ai.headkey.memory.implementations.InformationIngestionModuleImpl;
 import ai.headkey.memory.implementations.SimplePatternBeliefExtractionService;
+import ai.headkey.memory.implementations.StandardBeliefReinforcementConflictAnalyzer;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
 import ai.headkey.memory.interfaces.BeliefRelationshipService;
 import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
@@ -104,6 +105,7 @@ public class MemorySystemConfig {
             // Create similarity search strategy based on configuration
             JpaSimilaritySearchStrategy strategy =
                 createSimilaritySearchStrategy();
+            strategy.initialize(entityManager);
 
             // Build the memory system with configuration
             JpaMemoryEncodingSystem memorySystem =
@@ -192,10 +194,12 @@ public class MemorySystemConfig {
     public BeliefStorageService beliefStorageService() {
         Log.info("Creating JpaBeliefStorageService");
         
+        // Create LangChain4J embedding generator
+        AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator =
+            createLangChain4JEmbeddingGenerator();
         // Create repository dependencies
-        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
+        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory(), embeddingGenerator);
         BeliefConflictRepository conflictRepository = new JpaBeliefConflictRepository(entityManager.getEntityManagerFactory());
-        
         return new JpaBeliefStorageService(beliefRepository, conflictRepository);
     }
 
@@ -214,7 +218,7 @@ public class MemorySystemConfig {
     ) {
         Log.infof("Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s", 
             beliefExtractionService.getClass().getSimpleName());
-        return new InMemoryBeliefReinforcementConflictAnalyzer(beliefExtractionService, beliefStorageService);
+        return new StandardBeliefReinforcementConflictAnalyzer(beliefExtractionService, beliefStorageService);
     }
 
     /**

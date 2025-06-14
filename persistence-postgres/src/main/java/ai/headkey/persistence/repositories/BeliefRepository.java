@@ -4,31 +4,29 @@ import ai.headkey.persistence.entities.BeliefEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 /**
  * Repository interface for BeliefEntity operations.
- * 
+ *
  * This repository provides data access methods for BeliefEntity objects,
  * including CRUD operations, custom queries, and performance-optimized
  * batch operations. It uses JPA EntityManager for database interactions
  * and leverages named queries for better performance.
- * 
+ *
  * The repository is designed to be used with dependency injection
  * and transaction management provided by the container or framework.
- * 
+ *
  * @since 1.0
  */
 public interface BeliefRepository {
-
     // ========== Basic CRUD Operations ==========
 
     /**
      * Saves a belief entity to the database.
-     * 
+     *
      * @param belief The belief entity to save
      * @return The saved belief entity (with generated/updated fields)
      */
@@ -36,7 +34,7 @@ public interface BeliefRepository {
 
     /**
      * Saves multiple belief entities in a batch operation.
-     * 
+     *
      * @param beliefs The belief entities to save
      * @return List of saved belief entities
      */
@@ -44,7 +42,7 @@ public interface BeliefRepository {
 
     /**
      * Finds a belief entity by its ID.
-     * 
+     *
      * @param id The belief ID
      * @return Optional containing the belief if found
      */
@@ -52,7 +50,7 @@ public interface BeliefRepository {
 
     /**
      * Finds multiple belief entities by their IDs.
-     * 
+     *
      * @param ids Set of belief IDs
      * @return List of found belief entities
      */
@@ -60,7 +58,7 @@ public interface BeliefRepository {
 
     /**
      * Deletes a belief entity by its ID.
-     * 
+     *
      * @param id The belief ID
      * @return true if the belief was deleted, false if it didn't exist
      */
@@ -68,14 +66,14 @@ public interface BeliefRepository {
 
     /**
      * Deletes a belief entity.
-     * 
+     *
      * @param belief The belief entity to delete
      */
     void delete(BeliefEntity belief);
 
     /**
      * Checks if a belief exists by its ID.
-     * 
+     *
      * @param id The belief ID
      * @return true if the belief exists
      */
@@ -85,7 +83,7 @@ public interface BeliefRepository {
 
     /**
      * Finds all beliefs for a specific agent.
-     * 
+     *
      * @param agentId The agent ID
      * @param includeInactive Whether to include inactive beliefs
      * @return List of beliefs for the agent
@@ -94,63 +92,96 @@ public interface BeliefRepository {
 
     /**
      * Finds beliefs in a specific category.
-     * 
+     *
      * @param category The belief category
      * @param agentId Optional agent filter (null for all agents)
      * @param includeInactive Whether to include inactive beliefs
      * @return List of beliefs in the category
      */
-    List<BeliefEntity> findByCategory(String category, String agentId, boolean includeInactive);
+    List<BeliefEntity> findByCategory(
+        String category,
+        String agentId,
+        boolean includeInactive
+    );
 
     /**
      * Finds all active beliefs in the system.
-     * 
+     *
      * @return List of all active beliefs
      */
     List<BeliefEntity> findAllActive();
 
     /**
      * Finds all beliefs in the system (active and inactive).
-     * 
+     *
      * @return List of all beliefs
      */
     List<BeliefEntity> findAll();
 
     /**
      * Finds beliefs with confidence below a threshold.
-     * 
+     *
      * @param threshold The confidence threshold (0.0 to 1.0)
      * @param agentId Optional agent filter (null for all agents)
      * @return List of low-confidence beliefs
      */
-    List<BeliefEntity> findLowConfidenceBeliefs(double threshold, String agentId);
+    List<BeliefEntity> findLowConfidenceBeliefs(
+        double threshold,
+        String agentId
+    );
 
     /**
      * Searches for beliefs containing specific text.
-     * 
+     *
      * @param searchText The text to search for
      * @param agentId Optional agent filter (null for all agents)
      * @param limit Maximum number of results to return
      * @return List of matching beliefs ordered by relevance
      */
-    List<BeliefEntity> searchByText(String searchText, String agentId, int limit);
+    List<BeliefEntity> searchByText(
+        String searchText,
+        String agentId,
+        int limit
+    );
 
     /**
      * Finds beliefs similar to a given statement using text similarity.
-     * 
+     *
      * @param statement The statement to find similar beliefs for
      * @param agentId The agent to search within
      * @param similarityThreshold Minimum similarity score (0.0 to 1.0)
      * @param limit Maximum number of results to return
      * @return List of similar beliefs
      */
-    List<BeliefEntity> findSimilarBeliefs(String statement, String agentId, double similarityThreshold, int limit);
+    List<BeliefEntity> findSimilarBeliefs(
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    );
+
+    /**
+     * Finds beliefs similar to a given statement with similarity scores.
+     * This method uses vector similarity when available, falls back to text similarity.
+     *
+     * @param statement The statement to find similar beliefs for
+     * @param agentId The agent to search within
+     * @param similarityThreshold Minimum similarity score (0.0 to 1.0)
+     * @param limit Maximum number of results to return
+     * @return List of similar beliefs with their similarity scores
+     */
+    List<SimilarityResult> findSimilarBeliefsWithScores(
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    );
 
     // ========== Statistics and Analytics ==========
 
     /**
      * Counts total beliefs for an agent.
-     * 
+     *
      * @param agentId The agent ID
      * @param includeInactive Whether to include inactive beliefs
      * @return Total belief count for the agent
@@ -159,28 +190,28 @@ public interface BeliefRepository {
 
     /**
      * Counts all beliefs in the system.
-     * 
+     *
      * @return Total belief count
      */
     long count();
 
     /**
      * Counts active beliefs in the system.
-     * 
+     *
      * @return Active belief count
      */
     long countActive();
 
     /**
      * Counts distinct agents that have beliefs in the system.
-     * 
+     *
      * @return Count of distinct agent IDs
      */
     long countDistinctAgents();
 
     /**
      * Gets belief distribution by category.
-     * 
+     *
      * @param agentId Optional agent filter (null for all agents)
      * @return List of category distribution results
      */
@@ -188,17 +219,19 @@ public interface BeliefRepository {
 
     /**
      * Gets belief distribution by confidence level.
-     * 
+     *
      * @param agentId Optional agent filter (null for all agents)
      * @return List of confidence distribution results
      */
-    List<ConfidenceDistribution> getBeliefDistributionByConfidence(String agentId);
+    List<ConfidenceDistribution> getBeliefDistributionByConfidence(
+        String agentId
+    );
 
     // ========== Batch Operations ==========
 
     /**
      * Updates beliefs in batch for better performance.
-     * 
+     *
      * @param beliefs The beliefs to update
      * @return Number of updated beliefs
      */
@@ -206,7 +239,7 @@ public interface BeliefRepository {
 
     /**
      * Deactivates beliefs in batch.
-     * 
+     *
      * @param beliefIds The IDs of beliefs to deactivate
      * @return Number of deactivated beliefs
      */
@@ -214,7 +247,7 @@ public interface BeliefRepository {
 
     /**
      * Deletes beliefs in batch.
-     * 
+     *
      * @param beliefIds The IDs of beliefs to delete
      * @return Number of deleted beliefs
      */
@@ -234,14 +267,14 @@ public interface BeliefRepository {
 
     /**
      * Detaches an entity from the persistence context.
-     * 
+     *
      * @param belief The belief entity to detach
      */
     void detach(BeliefEntity belief);
 
     /**
      * Refreshes an entity from the database.
-     * 
+     *
      * @param belief The belief entity to refresh
      */
     void refresh(BeliefEntity belief);
@@ -252,6 +285,7 @@ public interface BeliefRepository {
      * Result class for category distribution queries.
      */
     class CategoryDistribution {
+
         private final String category;
         private final long count;
 
@@ -270,7 +304,13 @@ public interface BeliefRepository {
 
         @Override
         public String toString() {
-            return "CategoryDistribution{category='" + category + "', count=" + count + '}';
+            return (
+                "CategoryDistribution{category='" +
+                category +
+                "', count=" +
+                count +
+                '}'
+            );
         }
     }
 
@@ -278,6 +318,7 @@ public interface BeliefRepository {
      * Result class for confidence distribution queries.
      */
     class ConfidenceDistribution {
+
         private final String confidenceBucket;
         private final long count;
 
@@ -296,7 +337,46 @@ public interface BeliefRepository {
 
         @Override
         public String toString() {
-            return "ConfidenceDistribution{confidenceBucket='" + confidenceBucket + "', count=" + count + '}';
+            return (
+                "ConfidenceDistribution{confidenceBucket='" +
+                confidenceBucket +
+                "', count=" +
+                count +
+                '}'
+            );
+        }
+    }
+
+    /**
+     * Result class for similarity search queries.
+     */
+    class SimilarityResult {
+
+        private final BeliefEntity entity;
+        private final double similarityScore;
+
+        public SimilarityResult(BeliefEntity entity, double similarityScore) {
+            this.entity = entity;
+            this.similarityScore = similarityScore;
+        }
+
+        public BeliefEntity getEntity() {
+            return entity;
+        }
+
+        public double getSimilarityScore() {
+            return similarityScore;
+        }
+
+        @Override
+        public String toString() {
+            return (
+                "SimilarityResult{entity=" +
+                entity.getId() +
+                ", similarityScore=" +
+                similarityScore +
+                '}'
+            );
         }
     }
 }

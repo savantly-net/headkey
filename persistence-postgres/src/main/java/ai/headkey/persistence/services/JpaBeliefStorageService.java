@@ -9,7 +9,6 @@ import ai.headkey.persistence.mappers.BeliefConflictMapper;
 import ai.headkey.persistence.mappers.BeliefMapper;
 import ai.headkey.persistence.repositories.BeliefConflictRepository;
 import ai.headkey.persistence.repositories.BeliefRepository;
-
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -95,6 +94,7 @@ public class JpaBeliefStorageService implements BeliefStorageService {
                 entityToSave = BeliefMapper.toEntity(belief);
             }
 
+            // Save to database
             BeliefEntity savedEntity = beliefRepository.save(entityToSave);
             totalStoreOperations++;
 
@@ -134,7 +134,7 @@ public class JpaBeliefStorageService implements BeliefStorageService {
             List<BeliefEntity> savedEntities = beliefRepository.saveAll(
                 entities
             );
-            totalStoreOperations += savedEntities.size();
+            totalStoreOperations += beliefs.size();
 
             return savedEntities
                 .stream()
@@ -398,38 +398,25 @@ public class JpaBeliefStorageService implements BeliefStorageService {
 
         try {
             totalSearchOperations++;
-            List<BeliefEntity> entities = beliefRepository.findSimilarBeliefs(
-                statement,
-                agentId,
-                similarityThreshold,
-                limit
-            );
 
-            // Convert to SimilarBelief objects with calculated similarity scores
-            return entities
+            // Use repository method that returns similarity scores
+            List<BeliefRepository.SimilarityResult> results =
+                beliefRepository.findSimilarBeliefsWithScores(
+                    statement,
+                    agentId,
+                    similarityThreshold,
+                    limit
+                );
+
+            // Convert to SimilarBelief objects with actual similarity scores from database
+            return results
                 .stream()
-                .map(entity -> {
-                    double similarity = calculateSimilarity(
-                        statement,
-                        entity.getStatement()
-                    );
-                    return new SimilarBelief(
-                        BeliefMapper.toDto(entity),
-                        similarity
-                    );
-                })
-                .filter(
-                    similarBelief ->
-                        similarBelief.getSimilarityScore() >=
-                        similarityThreshold
-                )
-                .sorted((a, b) ->
-                    Double.compare(
-                        b.getSimilarityScore(),
-                        a.getSimilarityScore()
+                .map(result ->
+                    new SimilarBelief(
+                        BeliefMapper.toDto(result.getEntity()),
+                        result.getSimilarityScore()
                     )
                 )
-                .limit(limit)
                 .collect(Collectors.toList());
         } catch (Exception e) {
             throw new BeliefStorageException(
@@ -574,7 +561,7 @@ public class JpaBeliefStorageService implements BeliefStorageService {
             // Database-specific statistics
             stats.put("storageType", "postgresql_jpa");
             stats.put("persistenceProvider", "hibernate");
-            
+
             // Database information
             Map<String, Object> databaseInfo = new HashMap<>();
             databaseInfo.put("productName", "PostgreSQL");
@@ -843,71 +830,6 @@ public class JpaBeliefStorageService implements BeliefStorageService {
 
         return info;
     }
-
     // ========== Private Helper Methods ==========
-
-    /**
-     * Calculates similarity between two statements.
-     *
-     * This is a simple implementation. In a real system, this would
-     * integrate with LangChain4J for semantic similarity using embeddings.
-     */
-    private double calculateSimilarity(String statement1, String statement2) {
-        if (statement1 == null || statement2 == null) {
-            return 0.0;
-        }
-
-        String s1 = statement1.toLowerCase().trim();
-        String s2 = statement2.toLowerCase().trim();
-
-        if (s1.equals(s2)) {
-            return 1.0;
-        }
-
-        // Simple Jaccard similarity for now
-        // TODO: Integrate with LangChain4J for semantic similarity
-        String[] words1 = s1.split("\\s+");
-        String[] words2 = s2.split("\\s+");
-
-        Set<String> set1 = new HashSet<>(java.util.Arrays.asList(words1));
-        Set<String> set2 = new HashSet<>(java.util.Arrays.asList(words2));
-
-        // Remove common stop words
-        Set<String> stopWords = Set.of(
-            "the",
-            "a",
-            "an",
-            "and",
-            "or",
-            "but",
-            "in",
-            "on",
-            "at",
-            "to",
-            "for",
-            "of",
-            "with",
-            "by",
-            "is",
-            "are",
-            "was",
-            "were"
-        );
-        set1.removeAll(stopWords);
-        set2.removeAll(stopWords);
-
-        if (set1.isEmpty() && set2.isEmpty()) {
-            return 0.0;
-        }
-
-        Set<String> intersection = new HashSet<>(set1);
-        intersection.retainAll(set2);
-
-        Set<String> union = new HashSet<>(set1);
-        union.addAll(set2);
-
-        return union.isEmpty()
-            ? 0.0
-            : (double) intersection.size() / union.size();
-    }
+    // (Similarity calculations are now handled by the repository layer)
 }

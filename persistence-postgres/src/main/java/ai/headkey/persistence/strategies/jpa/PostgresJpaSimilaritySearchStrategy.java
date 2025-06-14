@@ -1,13 +1,16 @@
 package ai.headkey.persistence.strategies.jpa;
 
+import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.memory.dto.Metadata;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.Query;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +32,29 @@ public class PostgresJpaSimilaritySearchStrategy
         PostgresJpaSimilaritySearchStrategy.class
     );
 
+    private static final ObjectMapper objectMapper;
+
+    static {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.configure(
+            com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
+            false
+        );
+        objectMapper.configure(
+            com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS,
+            false
+        );
+        objectMapper.setVisibility(
+            com.fasterxml.jackson.annotation.PropertyAccessor.ALL,
+            com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.NONE
+        );
+        objectMapper.setVisibility(
+            com.fasterxml.jackson.annotation.PropertyAccessor.FIELD,
+            com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY
+        );
+    }
+
     private static final String VECTOR_SIMILARITY_QUERY =
         """
         SELECT
@@ -41,11 +67,11 @@ public class PostgresJpaSimilaritySearchStrategy
             m.last_accessed,
             m.metadata,
             m.embedding,
-            (1 - (m.embedding <=> CAST(:queryVector AS vector))) as similarity
+            (1 - (CAST(m.embedding AS vector) <=> CAST(:queryVector AS vector))) as similarity
         FROM memory_records m
         WHERE m.embedding IS NOT NULL
         AND (:agentId IS NULL OR m.agent_id = :agentId)
-        AND (1 - (m.embedding <=> CAST(:queryVector AS vector))) >= :threshold
+        AND (1 - (CAST(m.embedding AS vector) <=> CAST(:queryVector AS vector))) >= :threshold
         ORDER BY similarity DESC
         LIMIT :limit
         """;
@@ -277,32 +303,72 @@ public class PostgresJpaSimilaritySearchStrategy
         // id, agent_id, content, category, relevance_score, created_at, last_accessed, metadata, embedding
 
         MemoryRecord record = new MemoryRecord(
-            (String) row[0], // id
-            (String) row[1], // agentId
-            (String) row[2] // content
+            row[0] != null ? row[0].toString() : null, // id
+            row[1] != null ? row[1].toString() : null, // agentId
+            row[2] != null ? row[2].toString() : null // content
         );
 
-        // Set timestamps
+        // Set timestamps - handle both Instant and Timestamp types
         if (row[5] != null) {
-            record.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
+            if (row[5] instanceof java.time.Instant) {
+                record.setCreatedAt((java.time.Instant) row[5]);
+            } else if (row[5] instanceof java.sql.Timestamp) {
+                record.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
+            }
+        } else {
+            record.setCreatedAt(null);
         }
         if (row[6] != null) {
-            record.setLastAccessed(((java.sql.Timestamp) row[6]).toInstant());
+            if (row[6] instanceof java.time.Instant) {
+                record.setLastAccessed((java.time.Instant) row[6]);
+            } else if (row[6] instanceof java.sql.Timestamp) {
+                record.setLastAccessed(
+                    ((java.sql.Timestamp) row[6]).toInstant()
+                );
+            }
+        } else {
+            record.setLastAccessed(null);
         }
 
-        // Set relevance score
+        // Set relevance score - handle different numeric types
         if (row[4] != null) {
-            record.setRelevanceScore(((BigDecimal) row[4]).doubleValue());
+            if (row[4] instanceof BigDecimal) {
+                record.setRelevanceScore(((BigDecimal) row[4]).doubleValue());
+            } else if (row[4] instanceof Number) {
+                record.setRelevanceScore(((Number) row[4]).doubleValue());
+            }
         }
 
-        // Handle category JSON parsing if needed
+        // Handle category JSON parsing
         if (row[3] != null) {
-            // CategoryLabel parsing would go here
+            try {
+                String categoryJson = row[3].toString();
+                if (!categoryJson.trim().isEmpty()) {
+                    CategoryLabel category = objectMapper.readValue(
+                        categoryJson,
+                        CategoryLabel.class
+                    );
+                    record.setCategory(category);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse category JSON: {}", row[3], e);
+            }
         }
 
-        // Handle metadata JSON parsing if needed
+        // Handle metadata JSON parsing
         if (row[7] != null) {
-            // Metadata parsing would go here
+            try {
+                String metadataJson = row[7].toString();
+                if (!metadataJson.trim().isEmpty()) {
+                    Metadata metadata = objectMapper.readValue(
+                        metadataJson,
+                        Metadata.class
+                    );
+                    record.setMetadata(metadata);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse metadata JSON: {}", row[7], e);
+            }
         }
 
         return record;
@@ -361,7 +427,8 @@ public class PostgresJpaSimilaritySearchStrategy
         log.info(
             "PostgreSQL JPA Similarity Search Strategy initialized: " +
             "pgvectorAvailable={}, trigramAvailable={}",
-            pgvectorAvailable, trigramAvailable
+            pgvectorAvailable,
+            trigramAvailable
         );
     }
 

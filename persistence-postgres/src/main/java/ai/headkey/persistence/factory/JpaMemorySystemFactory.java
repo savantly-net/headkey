@@ -1,19 +1,20 @@
 package ai.headkey.persistence.factory;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
-import ai.headkey.memory.interfaces.MemoryEncodingSystem;
-import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
-import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
-import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
-import ai.headkey.persistence.strategies.jpa.PostgresJpaSimilaritySearchStrategy;
-import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
-import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+
+import org.jboss.logging.Logger;
+
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
+import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
+import ai.headkey.persistence.strategies.jpa.PostgresJpaSimilaritySearchStrategy;
+import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 /**
  * Factory for creating JPA-based memory encoding systems with optimal similarity search strategies.
@@ -27,6 +28,8 @@ import java.util.Properties;
  * @since 1.0
  */
 public class JpaMemorySystemFactory {
+
+    private static final Logger log = Logger.getLogger(JpaMemorySystemFactory.class);
     
     /**
      * Creates a JPA memory system with automatic strategy detection.
@@ -35,6 +38,7 @@ public class JpaMemorySystemFactory {
      * @return JpaMemoryEncodingSystem with optimal strategy for the database
      */
     public static JpaMemoryEncodingSystem createSystem(EntityManagerFactory entityManagerFactory) {
+        log.info("Creating JPA memory system with automatic strategy detection for EntityManagerFactory: " + entityManagerFactory);
         return new JpaMemoryEncodingSystem(entityManagerFactory);
     }
     
@@ -47,6 +51,7 @@ public class JpaMemorySystemFactory {
      */
     public static JpaMemoryEncodingSystem createSystem(EntityManagerFactory entityManagerFactory,
                                                       AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+        log.info("Creating JPA memory system with automatic strategy detection and embedding generator for EntityManagerFactory: " + entityManagerFactory);
         return new JpaMemoryEncodingSystem(entityManagerFactory, embeddingGenerator);
     }
     
@@ -62,6 +67,7 @@ public class JpaMemorySystemFactory {
             EntityManagerFactory entityManagerFactory,
             AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator,
             JpaSimilaritySearchStrategy similarityStrategy) {
+        log.info("Creating JPA memory system with custom similarity search strategy for EntityManagerFactory: " + entityManagerFactory);
         return new JpaMemoryEncodingSystem(entityManagerFactory, embeddingGenerator, 
                                          100, true, 1000, 0.0, similarityStrategy);
     }
@@ -75,6 +81,7 @@ public class JpaMemorySystemFactory {
      */
     public static JpaMemoryEncodingSystem createPostgreSQLSystem(String persistenceUnitName,
                                                                 AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+        log.info("Creating JPA memory system optimized for PostgreSQL with persistence unit: " + persistenceUnitName);
         EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName);
         PostgresJpaSimilaritySearchStrategy strategy = new PostgresJpaSimilaritySearchStrategy();
         return new JpaMemoryEncodingSystem(emf, embeddingGenerator, 100, true, 1000, 0.0, strategy);
@@ -95,6 +102,7 @@ public class JpaMemorySystemFactory {
                                                                 AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator,
                                                                 int maxSimilarityResults,
                                                                 double similarityThreshold) {
+        log.info("Creating JPA memory system optimized for PostgreSQL with custom configuration for persistence unit: " + persistenceUnitName);
         Map<String, Object> props = new HashMap<>();
         if (properties != null) {
             properties.forEach((key, value) -> props.put(key.toString(), value));
@@ -115,6 +123,7 @@ public class JpaMemorySystemFactory {
      */
     public static JpaMemoryEncodingSystem createH2System(String persistenceUnitName,
                                                          AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+        log.info("Creating JPA memory system optimized for H2 with persistence unit: " + persistenceUnitName);
         EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName);
         TextBasedJpaSimilaritySearchStrategy strategy = new TextBasedJpaSimilaritySearchStrategy();
         return new JpaMemoryEncodingSystem(emf, embeddingGenerator, 100, true, 500, 0.0, strategy);
@@ -127,6 +136,7 @@ public class JpaMemorySystemFactory {
      * @return JpaMemoryEncodingSystem configured for testing
      */
     public static JpaMemoryEncodingSystem createTestSystem(AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+        log.info("Creating JPA memory system for testing with in-memory H2 database");
         Map<String, Object> properties = new HashMap<>();
         properties.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
         properties.put("jakarta.persistence.jdbc.url", "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1");

@@ -1,10 +1,13 @@
 package ai.headkey.persistence.repositories.impl;
 
+import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
 import ai.headkey.persistence.entities.BeliefEntity;
 import ai.headkey.persistence.repositories.BeliefRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -52,18 +55,49 @@ public class JpaBeliefRepository implements BeliefRepository {
     );
 
     private final EntityManagerFactory entityManagerFactory;
+    private final VectorEmbeddingGenerator embeddingGenerator;
 
     /**
      * Constructor with EntityManagerFactory dependency.
      */
     public JpaBeliefRepository(EntityManagerFactory entityManagerFactory) {
+        this(entityManagerFactory, null);
+    }
+
+    /**
+     * Constructor with EntityManagerFactory dependency and embedding generator.
+     */
+    public JpaBeliefRepository(
+        EntityManagerFactory entityManagerFactory,
+        VectorEmbeddingGenerator embeddingGenerator
+    ) {
         this.entityManagerFactory = entityManagerFactory;
+        this.embeddingGenerator = embeddingGenerator;
         LOG.info(
-            "JpaBeliefRepository initialized with EntityManagerFactory pattern"
+            "JpaBeliefRepository initialized with EntityManagerFactory pattern and embedding generator: " +
+            (embeddingGenerator != null ? "enabled" : "disabled")
         );
         LOG.warn(
             "Collection fetch operations with pagination will trigger HHH90003004 warnings - this is expected behavior"
         );
+    }
+
+    /**
+     * Checks if vector-based similarity search is available.
+     *
+     * @return true if embedding generator is configured
+     */
+    public boolean isVectorSearchEnabled() {
+        return embeddingGenerator != null;
+    }
+
+    /**
+     * Gets the embedding generator used by this repository.
+     *
+     * @return The vector embedding generator, or null if not configured
+     */
+    public VectorEmbeddingGenerator getEmbeddingGenerator() {
+        return embeddingGenerator;
     }
 
     // ========== Basic CRUD Operations ==========
@@ -87,6 +121,35 @@ public class JpaBeliefRepository implements BeliefRepository {
             em.getTransaction().begin();
             LOG.debug("Transaction started successfully");
 
+            // Generate embedding if generator is available and belief has no embedding
+            if (
+                embeddingGenerator != null &&
+                belief.getStatement() != null &&
+                belief.getEmbedding() == null
+            ) {
+                try {
+                    LOG.debugf(
+                        "Generating embedding for belief: %s",
+                        belief.getId()
+                    );
+                    double[] embedding = embeddingGenerator.generateEmbedding(
+                        belief.getStatement()
+                    );
+                    belief.setEmbedding(embedding);
+                    LOG.debugf(
+                        "Embedding generated successfully for belief: %s",
+                        belief.getId()
+                    );
+                } catch (Exception e) {
+                    LOG.warnf(
+                        "Failed to generate embedding for belief %s: %s",
+                        belief.getId(),
+                        e.getMessage()
+                    );
+                    // Continue without embedding - don't fail the entire operation
+                }
+            }
+
             BeliefEntity result;
             boolean isUpdate =
                 belief.getId() != null && existsById(belief.getId());
@@ -105,13 +168,9 @@ public class JpaBeliefRepository implements BeliefRepository {
                 LOG.debugf("Belief persisted successfully: %s", result.getId());
             }
 
-            // Force flush to ensure data is written to database
-            LOG.debug("Flushing EntityManager to database");
-            em.flush();
-            LOG.debug("EntityManager flushed successfully");
-
             LOG.debug("Committing transaction");
             em.getTransaction().commit();
+            LOG.debug("Transaction committed successfully");
             LOG.infof(
                 "Belief %s saved successfully - ID: %s, Agent: %s, Active: %s",
                 isUpdate ? "updated" : "created",
@@ -180,6 +239,39 @@ public class JpaBeliefRepository implements BeliefRepository {
                     belief.getId(),
                     belief.getAgentId()
                 );
+
+                // Generate embedding if generator is available and belief has no embedding
+                if (
+                    embeddingGenerator != null &&
+                    belief.getStatement() != null &&
+                    belief.getEmbedding() == null
+                ) {
+                    try {
+                        LOG.debugf(
+                            "Generating embedding for belief %d: %s",
+                            i + 1,
+                            belief.getId()
+                        );
+                        double[] embedding =
+                            embeddingGenerator.generateEmbedding(
+                                belief.getStatement()
+                            );
+                        belief.setEmbedding(embedding);
+                        LOG.debugf(
+                            "Embedding generated successfully for belief %d: %s",
+                            i + 1,
+                            belief.getId()
+                        );
+                    } catch (Exception e) {
+                        LOG.warnf(
+                            "Failed to generate embedding for belief %d (%s): %s",
+                            i + 1,
+                            belief.getId(),
+                            e.getMessage()
+                        );
+                        // Continue without embedding - don't fail the entire operation
+                    }
+                }
 
                 BeliefEntity saved;
                 boolean isUpdate =
@@ -666,6 +758,26 @@ public class JpaBeliefRepository implements BeliefRepository {
         double similarityThreshold,
         int limit
     ) {
+        List<SimilarityResult> results = findSimilarBeliefsWithScores(
+            statement,
+            agentId,
+            similarityThreshold,
+            limit
+        );
+
+        return results
+            .stream()
+            .map(SimilarityResult::getEntity)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SimilarityResult> findSimilarBeliefsWithScores(
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
         if (statement == null || statement.trim().isEmpty()) {
             throw new IllegalArgumentException(
                 "Statement cannot be null or empty"
@@ -681,7 +793,7 @@ public class JpaBeliefRepository implements BeliefRepository {
         }
 
         LOG.debugf(
-            "Finding similar beliefs for statement: '%s', Agent: %s, Threshold: %.2f, Limit: %d",
+            "Finding similar beliefs with scores for statement: '%s', Agent: %s, Threshold: %.2f, Limit: %d",
             statement,
             agentId,
             similarityThreshold,
@@ -690,56 +802,13 @@ public class JpaBeliefRepository implements BeliefRepository {
 
         EntityManager em = entityManagerFactory.createEntityManager();
         try {
-            // For now, use simple text search as a fallback
-            // In a real implementation, this would use vector similarity with embeddings
-            String searchText = extractKeywordsFromStatement(statement);
-            LOG.debugf(
-                "Extracted keywords for similarity search: '%s'",
-                searchText
+            return findSimilarBeliefsWithVectorSearchAndScores(
+                em,
+                statement,
+                agentId,
+                similarityThreshold,
+                limit
             );
-
-            logCollectionFetchStrategy("findSimilarBeliefs", limit);
-            LOG.warn(
-                "Using collection fetch with pagination in findSimilarBeliefs - this causes HHH90003004 warning"
-            );
-            TypedQuery<BeliefEntity> query = em.createQuery(
-                "SELECT DISTINCT b FROM BeliefEntity b " +
-                "LEFT JOIN FETCH b.evidenceMemoryIds " +
-                "LEFT JOIN FETCH b.tags " +
-                "WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
-                "AND (:agentId IS NULL OR b.agentId = :agentId) " +
-                "AND b.active = true " +
-                "ORDER BY b.confidence DESC",
-                BeliefEntity.class
-            );
-            query.setParameter("searchText", searchText);
-            query.setParameter("agentId", agentId);
-            query.setMaxResults(limit);
-
-            LOG.debug(
-                "Executing similarity search query - expecting potential HHH90003004 warning"
-            );
-            List<BeliefEntity> results = query.getResultList();
-            LOG.infof(
-                "Similarity search completed - found %d similar beliefs for statement: '%s'",
-                results.size(),
-                statement
-            );
-
-            // Log collection sizes for each result to help with debugging
-            for (int i = 0; i < results.size(); i++) {
-                BeliefEntity belief = results.get(i);
-                LOG.tracef(
-                    "Similar belief %d - ID: %s, Evidence: %d, Tags: %d, Confidence: %.2f",
-                    i + 1,
-                    belief.getId(),
-                    belief.getEvidenceMemoryIds().size(),
-                    belief.getTags().size(),
-                    belief.getConfidence()
-                );
-            }
-
-            return results;
         } catch (Exception e) {
             LOG.errorf(
                 e,
@@ -1285,5 +1354,660 @@ public class JpaBeliefRepository implements BeliefRepository {
             .filter(word -> !stopWords.contains(word))
             .limit(5) // Take top 5 keywords
             .collect(Collectors.joining(" "));
+    }
+
+    /**
+     * Performs vector-based similarity search for beliefs using embeddings.
+     * Falls back to text-based search if embeddings are not available.
+     */
+    private List<SimilarityResult> findSimilarBeliefsWithVectorSearchAndScores(
+        EntityManager em,
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
+        LOG.debugf(
+            "Attempting vector-based similarity search for beliefs with scores"
+        );
+
+        // First, try to find beliefs with embeddings for vector search
+        try {
+            List<SimilarityResult> vectorResults =
+                performVectorSimilaritySearchWithScores(
+                    em,
+                    statement,
+                    agentId,
+                    similarityThreshold,
+                    limit
+                );
+
+            if (!vectorResults.isEmpty()) {
+                LOG.debugf(
+                    "Vector search returned %d results",
+                    vectorResults.size()
+                );
+                return vectorResults;
+            }
+        } catch (Exception e) {
+            LOG.warnf(
+                "Vector search failed, falling back to text search: %s",
+                e.getMessage()
+            );
+        }
+
+        // Fallback to text-based search
+        LOG.debugf("Performing fallback text-based similarity search");
+        return performTextSimilaritySearchWithScores(
+            em,
+            statement,
+            agentId,
+            similarityThreshold,
+            limit
+        );
+    }
+
+    /**
+     * Performs vector similarity search using embeddings.
+     */
+    private List<SimilarityResult> performVectorSimilaritySearchWithScores(
+        EntityManager em,
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
+        // If no embedding generator, return empty list
+        if (embeddingGenerator == null) {
+            LOG.debugf("No embedding generator available for vector search");
+            return new ArrayList<>();
+        }
+
+        try {
+            // Generate embedding for the query statement
+            double[] queryEmbedding = embeddingGenerator.generateEmbedding(
+                statement
+            );
+
+            // Check if pgvector extension is available
+            Query extensionCheck = em.createNativeQuery(
+                "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
+            );
+            extensionCheck.getSingleResult();
+
+            // Perform vector similarity search using pgvector
+            String vectorSimilarityQuery =
+                """
+                SELECT b.id, b.agent_id, b.statement, b.confidence, b.category,
+                       b.created_at, b.last_updated, b.reinforcement_count, b.active,
+                       b.embedding, b.embedding_magnitude, b.version,
+                       (1 - (CAST(b.embedding AS vector) <=> CAST(:queryVector AS vector))) as similarity
+                FROM beliefs b
+                WHERE b.embedding IS NOT NULL
+                AND (:agentId IS NULL OR b.agent_id = :agentId)
+                AND b.active = true
+                AND (1 - (CAST(b.embedding AS vector) <=> CAST(:queryVector AS vector))) >= :threshold
+                ORDER BY similarity DESC
+                LIMIT :limit
+                """;
+
+            Query query = em.createNativeQuery(vectorSimilarityQuery);
+            query.setParameter(
+                "queryVector",
+                vectorToPostgresArray(queryEmbedding)
+            );
+            query.setParameter("agentId", agentId);
+            query.setParameter("threshold", similarityThreshold);
+            query.setParameter("limit", limit);
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> results = query.getResultList();
+
+            List<SimilarityResult> similarityResults = new ArrayList<>();
+            for (Object[] row : results) {
+                BeliefEntity entity = mapResultToBeliefEntity(row);
+                double similarity = ((Number) row[12]).doubleValue(); // similarity is at index 12
+                similarityResults.add(new SimilarityResult(entity, similarity));
+            }
+
+            LOG.debugf(
+                "Vector search returned %d results",
+                similarityResults.size()
+            );
+            return similarityResults;
+        } catch (Exception e) {
+            LOG.warnf(
+                "Vector search failed: %s, falling back to text search",
+                e.getMessage()
+            );
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Performs text-based similarity search for beliefs using keyword matching.
+     */
+    private List<SimilarityResult> performTextSimilaritySearchWithScores(
+        EntityManager em,
+        String statement,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
+        String searchText = extractKeywordsFromStatement(statement);
+        LOG.debugf(
+            "Extracted keywords for text similarity search: '%s'",
+            searchText
+        );
+
+        logCollectionFetchStrategy("findSimilarBeliefs", limit);
+        LOG.warn(
+            "Using collection fetch with pagination in findSimilarBeliefs - this causes HHH90003004 warning"
+        );
+
+        TypedQuery<BeliefEntity> query = em.createQuery(
+            "SELECT DISTINCT b FROM BeliefEntity b " +
+            "LEFT JOIN FETCH b.evidenceMemoryIds " +
+            "LEFT JOIN FETCH b.tags " +
+            "WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) " +
+            "AND (:agentId IS NULL OR b.agentId = :agentId) " +
+            "AND b.active = true " +
+            "ORDER BY b.confidence DESC",
+            BeliefEntity.class
+        );
+        query.setParameter("searchText", searchText);
+        query.setParameter("agentId", agentId);
+        query.setMaxResults(limit);
+
+        LOG.debug(
+            "Executing similarity search query - expecting potential HHH90003004 warning"
+        );
+        List<BeliefEntity> results = query.getResultList();
+
+        LOG.infof(
+            "Text similarity search completed - found %d similar beliefs for statement: '%s'",
+            results.size(),
+            statement
+        );
+
+        // Calculate similarity scores and convert to SimilarityResult objects
+        List<SimilarityResult> similarityResults = new ArrayList<>();
+        for (BeliefEntity belief : results) {
+            double similarity = calculateJaccardSimilarity(
+                statement,
+                belief.getStatement()
+            );
+            if (similarity >= similarityThreshold) {
+                similarityResults.add(new SimilarityResult(belief, similarity));
+            }
+        }
+
+        // Sort by similarity score descending
+        similarityResults.sort((a, b) ->
+            Double.compare(b.getSimilarityScore(), a.getSimilarityScore())
+        );
+
+        // Limit results
+        if (similarityResults.size() > limit) {
+            similarityResults = similarityResults.subList(0, limit);
+        }
+
+        LOG.debugf(
+            "Text search returned %d results after similarity filtering",
+            similarityResults.size()
+        );
+
+        return similarityResults;
+    }
+
+    /**
+     * Saves a belief with its embedding.
+     */
+    public BeliefEntity saveWithEmbedding(
+        BeliefEntity belief,
+        double[] embedding
+    ) {
+        if (belief == null) {
+            throw new IllegalArgumentException("Belief cannot be null");
+        }
+
+        LOG.debugf(
+            "Saving belief with embedding - ID: %s, Embedding dimensions: %d",
+            belief.getId(),
+            embedding != null ? embedding.length : 0
+        );
+
+        EntityManager em = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = em.getTransaction();
+
+        try {
+            transaction.begin();
+
+            // Set the embedding
+            belief.setEmbedding(embedding);
+
+            BeliefEntity savedBelief;
+            if (existsByIdInTransaction(belief.getId(), em)) {
+                savedBelief = em.merge(belief);
+                LOG.debugf(
+                    "Updated existing belief with embedding: %s",
+                    belief.getId()
+                );
+            } else {
+                em.persist(belief);
+                savedBelief = belief;
+                LOG.debugf(
+                    "Persisted new belief with embedding: %s",
+                    belief.getId()
+                );
+            }
+
+            transaction.commit();
+            return savedBelief;
+        } catch (Exception e) {
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            LOG.errorf(
+                e,
+                "Error saving belief with embedding: %s",
+                e.getMessage()
+            );
+            throw new RuntimeException(
+                "Failed to save belief with embedding: " + e.getMessage(),
+                e
+            );
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Updates the embedding for an existing belief.
+     */
+    public void updateEmbedding(String beliefId, double[] embedding) {
+        if (beliefId == null || beliefId.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "Belief ID cannot be null or empty"
+            );
+        }
+
+        LOG.debugf(
+            "Updating embedding for belief: %s, Embedding dimensions: %d",
+            beliefId,
+            embedding != null ? embedding.length : 0
+        );
+
+        EntityManager em = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = em.getTransaction();
+
+        try {
+            transaction.begin();
+
+            BeliefEntity belief = em.find(BeliefEntity.class, beliefId);
+            if (belief == null) {
+                throw new RuntimeException("Belief not found: " + beliefId);
+            }
+
+            belief.setEmbedding(embedding);
+            em.merge(belief);
+
+            transaction.commit();
+            LOG.debugf(
+                "Successfully updated embedding for belief: %s",
+                beliefId
+            );
+        } catch (Exception e) {
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            LOG.errorf(
+                e,
+                "Error updating embedding for belief %s: %s",
+                beliefId,
+                e.getMessage()
+            );
+            throw new RuntimeException(
+                "Failed to update belief embedding: " + e.getMessage(),
+                e
+            );
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Finds beliefs that need embeddings (have null embeddings).
+     */
+    public List<BeliefEntity> findBeliefsNeedingEmbeddings(
+        String agentId,
+        int limit
+    ) {
+        LOG.debugf(
+            "Finding beliefs needing embeddings - Agent: %s, Limit: %d",
+            agentId,
+            limit
+        );
+
+        EntityManager em = entityManagerFactory.createEntityManager();
+        try {
+            TypedQuery<BeliefEntity> query = em.createQuery(
+                "SELECT b FROM BeliefEntity b " +
+                "WHERE b.embedding IS NULL " +
+                "AND (:agentId IS NULL OR b.agentId = :agentId) " +
+                "AND b.active = true " +
+                "ORDER BY b.createdAt DESC",
+                BeliefEntity.class
+            );
+            query.setParameter("agentId", agentId);
+            if (limit > 0) {
+                query.setMaxResults(limit);
+            }
+
+            List<BeliefEntity> results = query.getResultList();
+            LOG.debugf("Found %d beliefs needing embeddings", results.size());
+            return results;
+        } catch (Exception e) {
+            LOG.errorf(
+                e,
+                "Error finding beliefs needing embeddings: %s",
+                e.getMessage()
+            );
+            throw new RuntimeException(
+                "Failed to find beliefs needing embeddings: " + e.getMessage(),
+                e
+            );
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Counts beliefs that have embeddings.
+     */
+    public long countBeliefsWithEmbeddings(String agentId) {
+        EntityManager em = entityManagerFactory.createEntityManager();
+        try {
+            TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(b) FROM BeliefEntity b " +
+                "WHERE b.embedding IS NOT NULL " +
+                "AND (:agentId IS NULL OR b.agentId = :agentId)",
+                Long.class
+            );
+            query.setParameter("agentId", agentId);
+            return query.getSingleResult();
+        } catch (Exception e) {
+            LOG.errorf(
+                e,
+                "Error counting beliefs with embeddings: %s",
+                e.getMessage()
+            );
+            return 0;
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Finds similar beliefs using vector similarity search with a provided query embedding.
+     */
+    public List<BeliefEntity> findSimilarBeliefsWithEmbedding(
+        double[] queryEmbedding,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
+        if (queryEmbedding == null || queryEmbedding.length == 0) {
+            throw new IllegalArgumentException(
+                "Query embedding cannot be null or empty"
+            );
+        }
+        if (similarityThreshold < 0.0 || similarityThreshold > 1.0) {
+            throw new IllegalArgumentException(
+                "Similarity threshold must be between 0.0 and 1.0"
+            );
+        }
+        if (limit < 1) {
+            throw new IllegalArgumentException("Limit must be at least 1");
+        }
+
+        LOG.debugf(
+            "Finding similar beliefs with vector embedding - Agent: %s, Threshold: %.2f, Limit: %d, Embedding dimensions: %d",
+            agentId,
+            similarityThreshold,
+            limit,
+            queryEmbedding.length
+        );
+
+        EntityManager em = entityManagerFactory.createEntityManager();
+        try {
+            return performVectorSimilaritySearchWithEmbedding(
+                em,
+                queryEmbedding,
+                agentId,
+                similarityThreshold,
+                limit
+            );
+        } catch (Exception e) {
+            LOG.errorf(
+                e,
+                "Error finding similar beliefs with embedding: %s",
+                e.getMessage()
+            );
+            throw new RuntimeException(
+                "Failed to find similar beliefs with embedding: " +
+                e.getMessage(),
+                e
+            );
+        } finally {
+            em.close();
+        }
+    }
+
+    /**
+     * Performs vector similarity search using a provided query embedding and PostgreSQL pgvector.
+     */
+    private List<BeliefEntity> performVectorSimilaritySearchWithEmbedding(
+        EntityManager em,
+        double[] queryEmbedding,
+        String agentId,
+        double similarityThreshold,
+        int limit
+    ) {
+        try {
+            // Check if pgvector extension is available
+            Query extensionCheck = em.createNativeQuery(
+                "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
+            );
+            extensionCheck.getSingleResult();
+
+            LOG.debugf("Using pgvector for belief similarity search");
+
+            String vectorSimilarityQuery =
+                """
+                SELECT b.id, b.agent_id, b.statement, b.confidence, b.category,
+                       b.created_at, b.last_updated, b.reinforcement_count, b.active,
+                       b.embedding, b.embedding_magnitude, b.version,
+                       (1 - (CAST(b.embedding AS vector) <=> CAST(:queryVector AS vector))) as similarity
+                FROM beliefs b
+                WHERE b.embedding IS NOT NULL
+                AND (:agentId IS NULL OR b.agent_id = :agentId)
+                AND b.active = true
+                AND (1 - (CAST(b.embedding AS vector) <=> CAST(:queryVector AS vector))) >= :threshold
+                ORDER BY similarity DESC
+                LIMIT :limit
+                """;
+
+            Query query = em.createNativeQuery(vectorSimilarityQuery);
+            query.setParameter(
+                "queryVector",
+                vectorToPostgresArray(queryEmbedding)
+            );
+            query.setParameter("agentId", agentId);
+            query.setParameter("threshold", similarityThreshold);
+            query.setParameter("limit", limit);
+
+            @SuppressWarnings("unchecked")
+            List<Object[]> results = query.getResultList();
+
+            List<BeliefEntity> beliefEntities = new ArrayList<>();
+            for (Object[] row : results) {
+                BeliefEntity belief = mapResultToBeliefEntity(row);
+                beliefEntities.add(belief);
+            }
+
+            LOG.debugf(
+                "Vector similarity search found %d similar beliefs",
+                beliefEntities.size()
+            );
+
+            return beliefEntities;
+        } catch (Exception e) {
+            LOG.warnf("pgvector search failed, error: %s", e.getMessage());
+            // Return empty list if vector search fails
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Converts a double array to PostgreSQL vector array format.
+     */
+    private String vectorToPostgresArray(double[] vector) {
+        if (vector == null || vector.length == 0) {
+            return "[]";
+        }
+
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < vector.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append(vector[i]);
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    /**
+     * Maps database query result to BeliefEntity.
+     */
+    /**
+     * Calculate Jaccard similarity between two text statements.
+     */
+    private double calculateJaccardSimilarity(
+        String statement1,
+        String statement2
+    ) {
+        if (statement1 == null || statement2 == null) {
+            return 0.0;
+        }
+
+        String s1 = statement1.toLowerCase().trim();
+        String s2 = statement2.toLowerCase().trim();
+
+        if (s1.equals(s2)) {
+            return 1.0;
+        }
+
+        String[] words1 = s1.split("\\s+");
+        String[] words2 = s2.split("\\s+");
+
+        Set<String> set1 = new HashSet<>(Arrays.asList(words1));
+        Set<String> set2 = new HashSet<>(Arrays.asList(words2));
+
+        // Remove common stop words
+        Set<String> stopWords = Set.of(
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "is",
+            "are",
+            "was",
+            "were"
+        );
+        set1.removeAll(stopWords);
+        set2.removeAll(stopWords);
+
+        if (set1.isEmpty() && set2.isEmpty()) {
+            return 0.0;
+        }
+
+        Set<String> intersection = new HashSet<>(set1);
+        intersection.retainAll(set2);
+
+        Set<String> union = new HashSet<>(set1);
+        union.addAll(set2);
+
+        return union.isEmpty()
+            ? 0.0
+            : (double) intersection.size() / union.size();
+    }
+
+    private BeliefEntity mapResultToBeliefEntity(Object[] row) {
+        // Assuming the query returns columns in this order:
+        // id, agent_id, statement, confidence, category, created_at, last_updated,
+        // reinforcement_count, active, embedding, embedding_magnitude, version, similarity
+
+        BeliefEntity belief = new BeliefEntity();
+        belief.setId(row[0] != null ? row[0].toString() : null);
+        belief.setAgentId(row[1] != null ? row[1].toString() : null);
+        belief.setStatement(row[2] != null ? row[2].toString() : null);
+
+        // Handle confidence
+        if (row[3] != null) {
+            if (row[3] instanceof Number) {
+                belief.setConfidence(((Number) row[3]).doubleValue());
+            }
+        }
+
+        // Handle category
+        if (row[4] != null) {
+            belief.setCategory(row[4].toString());
+        }
+
+        // Handle timestamps
+        if (row[5] != null) {
+            if (row[5] instanceof java.time.Instant) {
+                belief.setCreatedAt((java.time.Instant) row[5]);
+            } else if (row[5] instanceof java.sql.Timestamp) {
+                belief.setCreatedAt(((java.sql.Timestamp) row[5]).toInstant());
+            }
+        }
+
+        if (row[6] != null) {
+            if (row[6] instanceof java.time.Instant) {
+                belief.setLastUpdated((java.time.Instant) row[6]);
+            } else if (row[6] instanceof java.sql.Timestamp) {
+                belief.setLastUpdated(
+                    ((java.sql.Timestamp) row[6]).toInstant()
+                );
+            }
+        }
+
+        // Handle reinforcement count
+        if (row[7] != null && row[7] instanceof Number) {
+            belief.setReinforcementCount(((Number) row[7]).intValue());
+        }
+
+        // Handle active flag
+        if (row[8] != null) {
+            belief.setActive((Boolean) row[8]);
+        }
+
+        // Handle version
+        if (row[11] != null && row[11] instanceof Number) {
+            belief.setVersion(((Number) row[11]).longValue());
+        }
+
+        return belief;
     }
 }

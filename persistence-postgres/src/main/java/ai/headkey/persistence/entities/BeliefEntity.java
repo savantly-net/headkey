@@ -1,66 +1,77 @@
 package ai.headkey.persistence.entities;
 
+import ai.headkey.persistence.entities.converters.VectorEmbeddingConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * JPA Entity for storing beliefs in PostgreSQL database.
- * 
+ *
  * This entity maps to the 'beliefs' table and represents the persistent
  * form of a belief in the system. It includes all necessary fields for
  * storing belief information with proper indexing and constraints.
- * 
+ *
  * Table structure optimized for:
  * - Fast lookups by ID and agent
  * - Efficient filtering by category and confidence
  * - Full-text search on statement content
  * - Proper indexing for performance
- * 
+ *
  * @since 1.0
  */
 @Entity
-@Table(name = "beliefs", indexes = {
-    @Index(name = "idx_belief_agent_id", columnList = "agent_id"),
-    @Index(name = "idx_belief_category", columnList = "category"),
-    @Index(name = "idx_belief_confidence", columnList = "confidence"),
-    @Index(name = "idx_belief_active", columnList = "active"),
-    @Index(name = "idx_belief_created_at", columnList = "created_at"),
-    @Index(name = "idx_belief_agent_category", columnList = "agent_id, category"),
-    @Index(name = "idx_belief_agent_active", columnList = "agent_id, active")
-})
-@NamedQueries({
-    @NamedQuery(
-        name = "BeliefEntity.findByAgent",
-        query = "SELECT b FROM BeliefEntity b WHERE b.agentId = :agentId AND (:includeInactive = true OR b.active = true) ORDER BY b.lastUpdated DESC"
-    ),
-    @NamedQuery(
-        name = "BeliefEntity.findByCategory",
-        query = "SELECT b FROM BeliefEntity b WHERE b.category = :category AND (:agentId IS NULL OR b.agentId = :agentId) AND (:includeInactive = true OR b.active = true) ORDER BY b.lastUpdated DESC"
-    ),
-    @NamedQuery(
-        name = "BeliefEntity.findLowConfidence",
-        query = "SELECT b FROM BeliefEntity b WHERE b.confidence < :threshold AND (:agentId IS NULL OR b.agentId = :agentId) AND b.active = true ORDER BY b.confidence ASC"
-    ),
-    @NamedQuery(
-        name = "BeliefEntity.countByAgent",
-        query = "SELECT COUNT(b) FROM BeliefEntity b WHERE b.agentId = :agentId AND (:includeInactive = true OR b.active = true)"
-    ),
-    @NamedQuery(
-        name = "BeliefEntity.findAllActive",
-        query = "SELECT b FROM BeliefEntity b WHERE b.active = true ORDER BY b.lastUpdated DESC"
-    ),
-    @NamedQuery(
-        name = "BeliefEntity.searchByText",
-        query = "SELECT b FROM BeliefEntity b WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) AND (:agentId IS NULL OR b.agentId = :agentId) AND b.active = true ORDER BY b.confidence DESC"
-    )
-})
+@Table(
+    name = "beliefs",
+    indexes = {
+        @Index(name = "idx_belief_agent_id", columnList = "agent_id"),
+        @Index(name = "idx_belief_category", columnList = "category"),
+        @Index(name = "idx_belief_confidence", columnList = "confidence"),
+        @Index(name = "idx_belief_active", columnList = "active"),
+        @Index(name = "idx_belief_created_at", columnList = "created_at"),
+        @Index(
+            name = "idx_belief_agent_category",
+            columnList = "agent_id, category"
+        ),
+        @Index(
+            name = "idx_belief_agent_active",
+            columnList = "agent_id, active"
+        ),
+    }
+)
+@NamedQueries(
+    {
+        @NamedQuery(
+            name = "BeliefEntity.findByAgent",
+            query = "SELECT b FROM BeliefEntity b WHERE b.agentId = :agentId AND (:includeInactive = true OR b.active = true) ORDER BY b.lastUpdated DESC"
+        ),
+        @NamedQuery(
+            name = "BeliefEntity.findByCategory",
+            query = "SELECT b FROM BeliefEntity b WHERE b.category = :category AND (:agentId IS NULL OR b.agentId = :agentId) AND (:includeInactive = true OR b.active = true) ORDER BY b.lastUpdated DESC"
+        ),
+        @NamedQuery(
+            name = "BeliefEntity.findLowConfidence",
+            query = "SELECT b FROM BeliefEntity b WHERE b.confidence < :threshold AND (:agentId IS NULL OR b.agentId = :agentId) AND b.active = true ORDER BY b.confidence ASC"
+        ),
+        @NamedQuery(
+            name = "BeliefEntity.countByAgent",
+            query = "SELECT COUNT(b) FROM BeliefEntity b WHERE b.agentId = :agentId AND (:includeInactive = true OR b.active = true)"
+        ),
+        @NamedQuery(
+            name = "BeliefEntity.findAllActive",
+            query = "SELECT b FROM BeliefEntity b WHERE b.active = true ORDER BY b.lastUpdated DESC"
+        ),
+        @NamedQuery(
+            name = "BeliefEntity.searchByText",
+            query = "SELECT b FROM BeliefEntity b WHERE LOWER(b.statement) LIKE LOWER(CONCAT('%', :searchText, '%')) AND (:agentId IS NULL OR b.agentId = :agentId) AND b.active = true ORDER BY b.confidence DESC"
+        ),
+    }
+)
 public class BeliefEntity {
 
     @Id
@@ -105,7 +116,10 @@ public class BeliefEntity {
     @CollectionTable(
         name = "belief_evidence_memories",
         joinColumns = @JoinColumn(name = "belief_id"),
-        indexes = @Index(name = "idx_evidence_belief_id", columnList = "belief_id")
+        indexes = @Index(
+            name = "idx_evidence_belief_id",
+            columnList = "belief_id"
+        )
     )
     @Column(name = "memory_id", length = 100)
     private Set<String> evidenceMemoryIds = new HashSet<>();
@@ -118,6 +132,23 @@ public class BeliefEntity {
     )
     @Column(name = "tag", length = 100)
     private Set<String> tags = new HashSet<>();
+
+    /**
+     * Vector embedding stored as binary data or JSON array.
+     * The storage format depends on database capabilities:
+     * - PostgreSQL: Can use vector extension or bytea
+     * - Other databases: JSON array or binary storage
+     */
+    @Convert(converter = VectorEmbeddingConverter.class)
+    @Column(name = "embedding", columnDefinition = "TEXT")
+    private double[] embedding;
+
+    /**
+     * Precomputed embedding magnitude for similarity calculations.
+     * This optimization avoids recalculating vector norms during similarity search.
+     */
+    @Column(name = "embedding_magnitude")
+    private Double embeddingMagnitude;
 
     // Audit fields
     @Column(name = "version")
@@ -139,7 +170,12 @@ public class BeliefEntity {
     /**
      * Constructor with required fields.
      */
-    public BeliefEntity(String id, String agentId, String statement, Double confidence) {
+    public BeliefEntity(
+        String id,
+        String agentId,
+        String statement,
+        Double confidence
+    ) {
         this();
         this.id = id;
         this.agentId = agentId;
@@ -150,7 +186,13 @@ public class BeliefEntity {
     /**
      * Constructor with all main fields.
      */
-    public BeliefEntity(String id, String agentId, String statement, Double confidence, String category) {
+    public BeliefEntity(
+        String id,
+        String agentId,
+        String statement,
+        Double confidence,
+        String category
+    ) {
         this(id, agentId, statement, confidence);
         this.category = category;
     }
@@ -216,6 +258,25 @@ public class BeliefEntity {
                 tags = new HashSet<>();
             }
             tags.add(tag.trim());
+        }
+    }
+
+    /**
+     * Sets the vector embedding and calculates its magnitude.
+     *
+     * @param embedding The vector embedding array
+     */
+    public void setEmbedding(double[] embedding) {
+        this.embedding = embedding;
+        if (embedding != null) {
+            // Calculate and store magnitude for optimization
+            double magnitude = 0.0;
+            for (double value : embedding) {
+                magnitude += value * value;
+            }
+            this.embeddingMagnitude = Math.sqrt(magnitude);
+        } else {
+            this.embeddingMagnitude = null;
         }
     }
 
@@ -312,11 +373,15 @@ public class BeliefEntity {
     }
 
     public Set<String> getEvidenceMemoryIds() {
-        return evidenceMemoryIds != null ? new HashSet<>(evidenceMemoryIds) : new HashSet<>();
+        return evidenceMemoryIds != null
+            ? new HashSet<>(evidenceMemoryIds)
+            : new HashSet<>();
     }
 
     public void setEvidenceMemoryIds(Set<String> evidenceMemoryIds) {
-        this.evidenceMemoryIds = new HashSet<>(evidenceMemoryIds != null ? evidenceMemoryIds : new HashSet<>());
+        this.evidenceMemoryIds = new HashSet<>(
+            evidenceMemoryIds != null ? evidenceMemoryIds : new HashSet<>()
+        );
     }
 
     public Set<String> getTags() {
@@ -335,6 +400,18 @@ public class BeliefEntity {
         this.version = version;
     }
 
+    public double[] getEmbedding() {
+        return embedding;
+    }
+
+    public Double getEmbeddingMagnitude() {
+        return embeddingMagnitude;
+    }
+
+    public void setEmbeddingMagnitude(Double embeddingMagnitude) {
+        this.embeddingMagnitude = embeddingMagnitude;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -350,16 +427,31 @@ public class BeliefEntity {
 
     @Override
     public String toString() {
-        return "BeliefEntity{" +
-                "id='" + id + '\'' +
-                ", agentId='" + agentId + '\'' +
-                ", statement='" + statement + '\'' +
-                ", confidence=" + confidence +
-                ", category='" + category + '\'' +
-                ", active=" + active +
-                ", reinforcementCount=" + reinforcementCount +
-                ", createdAt=" + createdAt +
-                ", lastUpdated=" + lastUpdated +
-                '}';
+        return (
+            "BeliefEntity{" +
+            "id='" +
+            id +
+            '\'' +
+            ", agentId='" +
+            agentId +
+            '\'' +
+            ", statement='" +
+            statement +
+            '\'' +
+            ", confidence=" +
+            confidence +
+            ", category='" +
+            category +
+            '\'' +
+            ", active=" +
+            active +
+            ", reinforcementCount=" +
+            reinforcementCount +
+            ", createdAt=" +
+            createdAt +
+            ", lastUpdated=" +
+            lastUpdated +
+            '}'
+        );
     }
 }

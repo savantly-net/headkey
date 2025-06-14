@@ -108,6 +108,36 @@ headkey/
 
 ## 🔌 Key Interfaces
 
+### JpaBeliefStorageService with Vector Embeddings
+```java
+// Create service with embedding generator for vector similarity search
+VectorEmbeddingGenerator embeddingGenerator = text -> {
+    // Your embedding generation logic (OpenAI, LangChain4J, etc.)
+    return generateEmbedding(text);
+};
+
+BeliefStorageService storageService = JpaBeliefStorageServiceFactory.builder()
+    .withEntityManagerFactory(emf)
+    .withEmbeddingGenerator(embeddingGenerator)
+    .build();
+
+// Store beliefs with automatic embedding generation
+Belief belief = new Belief.Builder()
+    .statement("The sky is blue on clear days")
+    .agentId("agent-1")
+    .build();
+    
+storageService.storeBelief(belief); // Embedding automatically generated and stored
+
+// Vector-based similarity search
+List<SimilarBelief> similar = storageService.findSimilarBeliefs(
+    "What color is the sky?", 
+    "agent-1", 
+    0.7, // similarity threshold
+    5    // max results
+);
+```
+
 ### Core Module Interfaces
 ```java
 // Information Ingestion
@@ -375,6 +405,42 @@ for (int i = 0; i < 1000; i++) {
 
 ## 🔍 Similarity Search Strategies
 
+### JpaBeliefStorageService Vector Search
+
+The `JpaBeliefStorageService` now supports vector-based similarity search through embedding generators:
+
+```java
+// Automatic vector/text search selection
+JpaBeliefStorageService service = new JpaBeliefStorageService(
+    beliefRepository, 
+    conflictRepository, 
+    embeddingGenerator  // Optional: enables vector search
+);
+
+// Vector search (when embedding generator is provided)
+List<SimilarBelief> vectorResults = service.findSimilarBeliefs(
+    "What is artificial intelligence?",
+    "agent-1",
+    0.7,  // cosine similarity threshold
+    10    // max results
+);
+
+// Text search fallback (when no embedding generator)
+List<SimilarBelief> textResults = service.findSimilarBeliefs(
+    "What is artificial intelligence?",
+    "agent-1",
+    0.3,  // Jaccard similarity threshold  
+    10    // max results
+);
+```
+
+### Search Method Comparison
+
+| Method | Algorithm | Threshold Range | Semantic Understanding | Performance |
+|--------|-----------|-----------------|----------------------|-------------|
+| **Vector Search** | Cosine Similarity | 0.0 - 1.0 | ✅ High | Excellent |
+| **Text Search** | Jaccard Similarity | 0.0 - 1.0 | ❌ Basic | Good |
+
 ### Strategy Implementations
 ```java
 // Text-based (H2, MySQL)
@@ -497,6 +563,7 @@ quarkus.langchain4j.openai.log-requests=true
 - [x] REST API with Quarkus
 - [x] LangChain4J integration
 - [x] Similarity search strategies
+- [x] JpaBeliefStorageService with vector embedding support
 - [x] Comprehensive testing
 - [x] Configuration management
 - [x] Health monitoring
@@ -504,6 +571,7 @@ quarkus.langchain4j.openai.log-requests=true
 - [x] Modern Quarkus Hibernate configuration (no persistence.xml)
 
 ### 🔄 Current Focus
+- ✅ JpaBeliefStorageService embedding generator integration
 - CDI integration fixes for EntityManagerFactory injection
 - JPA integration test improvements
 - Advanced vector search optimizations

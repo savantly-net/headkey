@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS memories (
     relevance_score DOUBLE PRECISION,
     version BIGINT NOT NULL DEFAULT 1,
     vector_embedding VECTOR(1536), -- OpenAI embedding dimension
-    
+
     -- Constraints
     CONSTRAINT memories_relevance_score_check CHECK (relevance_score >= 0.0 AND relevance_score <= 1.0),
     CONSTRAINT memories_version_check CHECK (version > 0),
@@ -35,49 +35,49 @@ CREATE INDEX IF NOT EXISTS idx_memories_relevance_score ON memories (relevance_s
 
 -- Vector similarity indexes for efficient similarity search
 -- IVFFlat index for cosine similarity (good for general use)
-CREATE INDEX IF NOT EXISTS idx_memories_vector_cosine 
-ON memories USING ivfflat (vector_embedding vector_cosine_ops) 
+CREATE INDEX IF NOT EXISTS idx_memories_vector_cosine
+ON memories USING ivfflat (vector_embedding vector_cosine_ops)
 WITH (lists = 100);
 
 -- IVFFlat index for dot product similarity (when vectors are normalized)
-CREATE INDEX IF NOT EXISTS idx_memories_vector_dot_product 
-ON memories USING ivfflat (vector_embedding vector_ip_ops) 
+CREATE INDEX IF NOT EXISTS idx_memories_vector_dot_product
+ON memories USING ivfflat (vector_embedding vector_ip_ops)
 WITH (lists = 100);
 
 -- L2 distance index (alternative similarity metric)
-CREATE INDEX IF NOT EXISTS idx_memories_vector_l2 
-ON memories USING ivfflat (vector_embedding vector_l2_ops) 
+CREATE INDEX IF NOT EXISTS idx_memories_vector_l2
+ON memories USING ivfflat (vector_embedding vector_l2_ops)
 WITH (lists = 100);
 
 -- Full-text search index for content
-CREATE INDEX IF NOT EXISTS idx_memories_content_fts 
+CREATE INDEX IF NOT EXISTS idx_memories_content_fts
 ON memories USING gin (to_tsvector('english', content));
 
 -- Composite indexes for filtered searches
-CREATE INDEX IF NOT EXISTS idx_memories_agent_relevance 
+CREATE INDEX IF NOT EXISTS idx_memories_agent_relevance
 ON memories (agent_id, relevance_score DESC);
 
-CREATE INDEX IF NOT EXISTS idx_memories_agent_category 
+CREATE INDEX IF NOT EXISTS idx_memories_agent_category
 ON memories (agent_id, category_primary);
 
-CREATE INDEX IF NOT EXISTS idx_memories_agent_created 
+CREATE INDEX IF NOT EXISTS idx_memories_agent_created
 ON memories (agent_id, created_at DESC);
 
 -- Index for vector queries filtered by agent
-CREATE INDEX IF NOT EXISTS idx_memories_agent_vector 
+CREATE INDEX IF NOT EXISTS idx_memories_agent_vector
 ON memories (agent_id) WHERE vector_embedding IS NOT NULL;
 
 -- JSONB indexes for metadata queries
-CREATE INDEX IF NOT EXISTS idx_memories_metadata_gin 
+CREATE INDEX IF NOT EXISTS idx_memories_metadata_gin
 ON memories USING gin (metadata_json);
 
 -- Partial indexes for common filtering scenarios
-CREATE INDEX IF NOT EXISTS idx_memories_high_relevance 
-ON memories (agent_id, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_memories_high_relevance
+ON memories (agent_id, created_at DESC)
 WHERE relevance_score >= 0.7;
 
-CREATE INDEX IF NOT EXISTS idx_memories_recent 
-ON memories (agent_id, relevance_score DESC) 
+CREATE INDEX IF NOT EXISTS idx_memories_recent
+ON memories (agent_id, relevance_score DESC)
 WHERE created_at >= NOW() - INTERVAL '30 days';
 
 -- Create a function to update last_accessed timestamp
@@ -110,19 +110,19 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         m.id,
         (
             -- Vector similarity (cosine distance converted to similarity)
-            CASE 
+            CASE
                 WHEN m.vector_embedding IS NOT NULL AND query_vector IS NOT NULL THEN
                     (1.0 - (m.vector_embedding <=> query_vector)) * 100.0
                 ELSE 0.0
             END +
             -- Text similarity boost
-            CASE 
+            CASE
                 WHEN query_text IS NOT NULL THEN
-                    CASE 
+                    CASE
                         WHEN LOWER(m.content) LIKE LOWER('%' || query_text || '%') THEN 25.0
                         WHEN to_tsvector('english', m.content) @@ plainto_tsquery('english', query_text) THEN 15.0
                         ELSE 0.0
@@ -132,7 +132,7 @@ BEGIN
             -- Relevance score boost
             COALESCE(m.relevance_score * 10, 0.0) +
             -- Recency boost (newer memories get slight preference)
-            CASE 
+            CASE
                 WHEN m.created_at >= NOW() - INTERVAL '7 days' THEN 5.0
                 WHEN m.created_at >= NOW() - INTERVAL '30 days' THEN 2.0
                 ELSE 0.0
@@ -144,7 +144,7 @@ BEGIN
         m.created_at,
         m.relevance_score
     FROM memories m
-    WHERE 
+    WHERE
         (agent_filter IS NULL OR m.agent_id = agent_filter)
         AND (
             (m.vector_embedding IS NOT NULL AND query_vector IS NOT NULL)
@@ -159,13 +159,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create indexes to support the hybrid search function
-CREATE INDEX IF NOT EXISTS idx_memories_hybrid_search 
-ON memories (agent_id, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_memories_hybrid_search
+ON memories (agent_id, created_at DESC)
 WHERE vector_embedding IS NOT NULL;
 
 -- Statistics and monitoring views
 CREATE OR REPLACE VIEW memory_statistics AS
-SELECT 
+SELECT
     COUNT(*) as total_memories,
     COUNT(DISTINCT agent_id) as unique_agents,
     COUNT(DISTINCT category_primary) as unique_categories,
@@ -177,7 +177,7 @@ SELECT
 FROM memories;
 
 CREATE OR REPLACE VIEW agent_memory_stats AS
-SELECT 
+SELECT
     agent_id,
     COUNT(*) as memory_count,
     AVG(relevance_score) as avg_relevance_score,
@@ -185,23 +185,23 @@ SELECT
     MIN(created_at) as oldest_memory,
     MAX(created_at) as newest_memory,
     MAX(last_accessed) as most_recent_access
-FROM memories 
+FROM memories
 GROUP BY agent_id;
 
 CREATE OR REPLACE VIEW category_distribution AS
-SELECT 
+SELECT
     category_primary,
     COUNT(*) as memory_count,
     COUNT(DISTINCT agent_id) as agent_count,
     AVG(relevance_score) as avg_relevance_score
-FROM memories 
+FROM memories
 WHERE category_primary IS NOT NULL
 GROUP BY category_primary
 ORDER BY memory_count DESC;
 
 -- Performance monitoring view
 CREATE OR REPLACE VIEW vector_index_stats AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -209,8 +209,8 @@ SELECT
     idx_tup_fetch,
     idx_blks_read,
     idx_blks_hit
-FROM pg_stat_user_indexes 
-WHERE tablename = 'memories' 
+FROM pg_stat_user_indexes
+WHERE tablename = 'memories'
 AND indexname LIKE 'idx_memories_vector%';
 
 -- Cleanup and maintenance functions
@@ -222,11 +222,11 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM memories 
-    WHERE 
+    DELETE FROM memories
+    WHERE
         created_at < NOW() - INTERVAL '1 day' * days_threshold
         AND relevance_score < min_relevance_score;
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
 END;
@@ -240,7 +240,7 @@ BEGIN
     EXECUTE 'REINDEX INDEX CONCURRENTLY idx_memories_vector_cosine';
     EXECUTE 'REINDEX INDEX CONCURRENTLY idx_memories_vector_dot_product';
     EXECUTE 'REINDEX INDEX CONCURRENTLY idx_memories_vector_l2';
-    
+
     RETURN 'Vector indexes rebuilt successfully';
 EXCEPTION
     WHEN OTHERS THEN
@@ -254,6 +254,106 @@ $$ LANGUAGE plpgsql;
 -- GRANT EXECUTE ON FUNCTION similarity_search_hybrid TO memory_app_user;
 -- GRANT EXECUTE ON FUNCTION cleanup_old_memories TO memory_admin_user;
 -- GRANT EXECUTE ON FUNCTION rebuild_vector_indexes TO memory_admin_user;
+
+-- Main beliefs table with vector embedding support
+CREATE TABLE IF NOT EXISTS beliefs (
+    id VARCHAR(100) PRIMARY KEY,
+    agent_id VARCHAR(100) NOT NULL,
+    statement TEXT NOT NULL,
+    confidence DECIMAL(5,4) NOT NULL,
+    category VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reinforcement_count INTEGER NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT true,
+    embedding VECTOR(1536), -- OpenAI embedding dimension
+    embedding_magnitude DOUBLE PRECISION,
+    version BIGINT NOT NULL DEFAULT 1,
+
+    -- Constraints
+    CONSTRAINT beliefs_confidence_check CHECK (confidence >= 0.0 AND confidence <= 1.0),
+    CONSTRAINT beliefs_reinforcement_count_check CHECK (reinforcement_count >= 0),
+    CONSTRAINT beliefs_version_check CHECK (version > 0)
+);
+
+-- Basic indexes for beliefs
+CREATE INDEX IF NOT EXISTS idx_belief_agent_id ON beliefs (agent_id);
+CREATE INDEX IF NOT EXISTS idx_belief_category ON beliefs (category);
+CREATE INDEX IF NOT EXISTS idx_belief_confidence ON beliefs (confidence DESC);
+CREATE INDEX IF NOT EXISTS idx_belief_active ON beliefs (active);
+CREATE INDEX IF NOT EXISTS idx_belief_created_at ON beliefs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_belief_last_updated ON beliefs (last_updated DESC);
+
+-- Composite indexes for common query patterns
+CREATE INDEX IF NOT EXISTS idx_belief_agent_category ON beliefs (agent_id, category);
+CREATE INDEX IF NOT EXISTS idx_belief_agent_active ON beliefs (agent_id, active);
+CREATE INDEX IF NOT EXISTS idx_belief_agent_confidence ON beliefs (agent_id, confidence DESC);
+CREATE INDEX IF NOT EXISTS idx_belief_active_confidence ON beliefs (active, confidence DESC);
+
+-- Vector similarity indexes for beliefs
+CREATE INDEX IF NOT EXISTS idx_beliefs_vector_cosine
+ON beliefs USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100) WHERE embedding IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_beliefs_vector_dot_product
+ON beliefs USING ivfflat (embedding vector_ip_ops)
+WITH (lists = 100) WHERE embedding IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_beliefs_vector_l2
+ON beliefs USING ivfflat (embedding vector_l2_ops)
+WITH (lists = 100) WHERE embedding IS NOT NULL;
+
+-- Full-text search index for belief statements
+CREATE INDEX IF NOT EXISTS idx_beliefs_statement_fts
+ON beliefs USING gin (to_tsvector('english', statement));
+
+-- Partial indexes for high-value beliefs
+CREATE INDEX IF NOT EXISTS idx_beliefs_high_confidence
+ON beliefs (agent_id, last_updated DESC)
+WHERE confidence >= 0.8 AND active = true;
+
+CREATE INDEX IF NOT EXISTS idx_beliefs_with_embeddings
+ON beliefs (agent_id, confidence DESC)
+WHERE embedding IS NOT NULL AND active = true;
+
+-- Collection tables for belief tags and evidence
+CREATE TABLE IF NOT EXISTS belief_tags (
+    belief_id VARCHAR(100) NOT NULL,
+    tag VARCHAR(100) NOT NULL,
+    PRIMARY KEY (belief_id, tag),
+    CONSTRAINT fk_belief_tags_belief FOREIGN KEY (belief_id)
+        REFERENCES beliefs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_belief_tags_belief_id ON belief_tags(belief_id);
+CREATE INDEX IF NOT EXISTS idx_belief_tags_tag ON belief_tags(tag);
+
+CREATE TABLE IF NOT EXISTS belief_evidence_memories (
+    belief_id VARCHAR(100) NOT NULL,
+    memory_id VARCHAR(100) NOT NULL,
+    PRIMARY KEY (belief_id, memory_id),
+    CONSTRAINT fk_belief_evidence_belief FOREIGN KEY (belief_id)
+        REFERENCES beliefs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_belief_evidence_belief_id ON belief_evidence_memories(belief_id);
+CREATE INDEX IF NOT EXISTS idx_belief_evidence_memory_id ON belief_evidence_memories(memory_id);
+
+-- Function to update belief last_updated timestamp
+CREATE OR REPLACE FUNCTION update_belief_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_updated = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically update last_updated on belief updates
+DROP TRIGGER IF EXISTS update_beliefs_last_updated ON beliefs;
+CREATE TRIGGER update_beliefs_last_updated
+    BEFORE UPDATE ON beliefs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_belief_timestamp();
 
 -- Create belief_relationships table for knowledge graph edges
 CREATE TABLE IF NOT EXISTS belief_relationships (
@@ -271,13 +371,13 @@ CREATE TABLE IF NOT EXISTS belief_relationships (
     last_updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     version BIGINT DEFAULT 0,
-    
+
     -- Constraints
     CONSTRAINT rel_strength_check CHECK (strength >= 0.0 AND strength <= 1.0),
     CONSTRAINT rel_different_beliefs CHECK (source_belief_id != target_belief_id),
     CONSTRAINT rel_temporal_validity CHECK (
-        effective_from IS NULL OR 
-        effective_until IS NULL OR 
+        effective_from IS NULL OR
+        effective_until IS NULL OR
         effective_from <= effective_until
     ),
     CONSTRAINT rel_valid_type CHECK (
@@ -300,7 +400,7 @@ CREATE TABLE IF NOT EXISTS belief_relationship_metadata (
     metadata_key VARCHAR(100) NOT NULL,
     metadata_value TEXT,
     PRIMARY KEY (relationship_id, metadata_key),
-    CONSTRAINT fk_rel_metadata FOREIGN KEY (relationship_id) 
+    CONSTRAINT fk_rel_metadata FOREIGN KEY (relationship_id)
         REFERENCES belief_relationships(id) ON DELETE CASCADE
 );
 
@@ -327,16 +427,16 @@ CREATE INDEX IF NOT EXISTS idx_rel_source_active ON belief_relationships(source_
 CREATE INDEX IF NOT EXISTS idx_rel_target_active ON belief_relationships(target_belief_id, active);
 
 -- Specialized indexes for deprecation queries
-CREATE INDEX IF NOT EXISTS idx_rel_deprecation ON belief_relationships(relationship_type, active, effective_until) 
+CREATE INDEX IF NOT EXISTS idx_rel_deprecation ON belief_relationships(relationship_type, active, effective_until)
     WHERE relationship_type IN ('SUPERSEDES', 'UPDATES', 'DEPRECATES', 'REPLACES');
 
 -- Index for high-strength relationships
-CREATE INDEX IF NOT EXISTS idx_rel_high_strength ON belief_relationships(agent_id, strength DESC) 
+CREATE INDEX IF NOT EXISTS idx_rel_high_strength ON belief_relationships(agent_id, strength DESC)
     WHERE strength >= 0.8 AND active = true;
 
 -- Index for currently effective relationships
-CREATE INDEX IF NOT EXISTS idx_rel_currently_effective ON belief_relationships(agent_id, relationship_type) 
-    WHERE active = true 
+CREATE INDEX IF NOT EXISTS idx_rel_currently_effective ON belief_relationships(agent_id, relationship_type)
+    WHERE active = true
     AND (effective_from IS NULL OR effective_from <= CURRENT_TIMESTAMP)
     AND (effective_until IS NULL OR effective_until > CURRENT_TIMESTAMP);
 
@@ -361,9 +461,9 @@ $$ LANGUAGE plpgsql;
 
 -- Trigger to automatically update last_updated on updates
 DROP TRIGGER IF EXISTS update_belief_relationships_last_updated ON belief_relationships;
-CREATE TRIGGER update_belief_relationships_last_updated 
-    BEFORE UPDATE ON belief_relationships 
-    FOR EACH ROW 
+CREATE TRIGGER update_belief_relationships_last_updated
+    BEFORE UPDATE ON belief_relationships
+    FOR EACH ROW
     EXECUTE FUNCTION update_belief_relationship_timestamp();
 
 -- Function to find deprecated beliefs
@@ -379,7 +479,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         r.target_belief_id,
         r.source_belief_id,
         r.relationship_type,
@@ -397,7 +497,7 @@ $$ LANGUAGE plpgsql;
 
 -- Statistics view for relationship analytics
 CREATE OR REPLACE VIEW belief_relationship_statistics AS
-SELECT 
+SELECT
     COUNT(*) as total_relationships,
     COUNT(DISTINCT agent_id) as unique_agents,
     COUNT(CASE WHEN active = true THEN 1 END) as active_relationships,
@@ -410,7 +510,7 @@ FROM belief_relationships;
 
 -- Agent-specific relationship statistics
 CREATE OR REPLACE VIEW agent_relationship_stats AS
-SELECT 
+SELECT
     agent_id,
     COUNT(*) as total_relationships,
     COUNT(CASE WHEN active = true THEN 1 END) as active_relationships,
@@ -419,18 +519,18 @@ SELECT
     COUNT(CASE WHEN relationship_type IN ('SUPERSEDES', 'UPDATES', 'DEPRECATES', 'REPLACES') THEN 1 END) as deprecation_relationships,
     MIN(created_at) as oldest_relationship,
     MAX(created_at) as newest_relationship
-FROM belief_relationships 
+FROM belief_relationships
 GROUP BY agent_id;
 
 -- Relationship type distribution view
 CREATE OR REPLACE VIEW relationship_type_distribution AS
-SELECT 
+SELECT
     relationship_type,
     COUNT(*) as relationship_count,
     COUNT(DISTINCT agent_id) as agent_count,
     AVG(strength) as avg_strength,
     COUNT(CASE WHEN active = true THEN 1 END) as active_count
-FROM belief_relationships 
+FROM belief_relationships
 GROUP BY relationship_type
 ORDER BY relationship_count DESC;
 
