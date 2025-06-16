@@ -33,11 +33,9 @@ import ai.headkey.rest.service.QuarkusCategoryExtractionService;
 import ai.headkey.rest.service.QuarkusTagExtractionService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.profile.IfBuildProfile;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -64,6 +62,7 @@ import jakarta.persistence.EntityManager;
  * - Dependency inversion: Depends on abstractions
  */
 @ApplicationScoped
+@IfBuildProfile("postgres")
 public class PostgresPersistenceConfiguration {
 
     @Inject

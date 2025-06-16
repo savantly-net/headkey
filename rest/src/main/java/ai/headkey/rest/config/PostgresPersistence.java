@@ -42,4 +42,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD})
 public @interface PostgresPersistence {
+
+    public static String NAME = "postgres";
 }

@@ -1,5 +1,7 @@
 package ai.headkey.rest.config;
 
+import java.util.Optional;
+
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
@@ -260,14 +262,14 @@ public interface MemorySystemProperties {
          *
          * @return username, empty by default
          */
-        String username();
+        Optional<String> username();
 
         /**
          * Elasticsearch password for authentication.
          *
          * @return password, empty by default
          */
-        String password();
+        Optional<String> password();
 
         /**
          * Connection timeout in milliseconds.

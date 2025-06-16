@@ -6,6 +6,7 @@ import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;
 import ai.headkey.rest.config.MemorySystemProperties;
 import ai.headkey.rest.config.PostgresPersistence;
+import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -45,6 +46,7 @@ import org.jboss.logging.Logger;
     description = "JPA Memory System monitoring and configuration"
 )
 @Produces(MediaType.APPLICATION_JSON)
+@IfBuildProfile("postgres")
 public class JpaMemorySystemController {
 
     private static final Logger LOG = Logger.getLogger(

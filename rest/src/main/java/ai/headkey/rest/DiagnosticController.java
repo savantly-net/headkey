@@ -4,6 +4,7 @@ import ai.headkey.rest.service.BeliefPersistenceDiagnosticService;
 import ai.headkey.rest.service.BeliefPersistenceDiagnosticService.BeliefCreationMonitor;
 import ai.headkey.rest.service.BeliefPersistenceDiagnosticService.BeliefPersistenceTestResult;
 import ai.headkey.rest.service.BeliefPersistenceDiagnosticService.DiagnosticReport;
+import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -38,6 +39,7 @@ import org.jboss.logging.Logger;
     description = "Belief persistence troubleshooting and diagnostics"
 )
 @Produces(MediaType.APPLICATION_JSON)
+@IfBuildProfile("diagnostics")
 public class DiagnosticController {
 
     private static final Logger LOG = Logger.getLogger(

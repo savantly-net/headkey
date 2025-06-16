@@ -22,11 +22,20 @@ NEXT_VERSION := $(shell echo $(FINAL_VERSION) | awk -F. '{$$NF = $$NF + 1;} 1' |
 GIT_COMMIT := $(shell git rev-parse --short HEAD)
 
 
-.PHONY: run
-run:
-	@echo "Running quarkus app..."
-	docker compose up -d
+.PHONY: run-postgres
+run-postgres:
+	@echo "Running app with postgres..."
+	docker compose up -d postgres
 	./gradlew rest:quarkusDev -Dquarkus.profile=prod
+
+.PHONY: run-elasticsearch
+run-elasticsearch:
+	@echo "Running app with Elasticsearch..."
+	docker compose up -d elasticsearch
+	./gradlew rest:quarkusDev -Dquarkus.profile=elasticsearch-prod
+
+.PHONY: run
+run: run-elasticsearch
 
 .PHONY: dev
 dev: run

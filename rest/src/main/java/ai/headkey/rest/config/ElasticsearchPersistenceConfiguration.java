@@ -19,7 +19,6 @@ import ai.headkey.persistence.elastic.configuration.ElasticsearchConfiguration;
 import ai.headkey.persistence.elastic.services.ElasticsearchBeliefRelationshipService;
 import ai.headkey.persistence.elastic.services.ElasticsearchBeliefStorageService;
 import ai.headkey.persistence.elastic.services.ElasticsearchMemoryEncodingSystem;
-import ai.headkey.rest.config.MemorySystemProperties.ElasticsearchConfig;
 import ai.headkey.rest.service.LangChain4JVectorEmbeddingGenerator;
 import ai.headkey.rest.service.QuarkusCategoryExtractionService;
 import ai.headkey.rest.service.QuarkusTagExtractionService;
@@ -73,12 +72,15 @@ public class ElasticsearchPersistenceConfiguration {
     @ElasticsearchPersistence
     public ElasticsearchConfiguration elasticsearchConfiguration() {
         var esConnectionConfig = new ElasticsearchConfiguration.ElasticsearchConnectionConfig.Builder()
-                .authentication(properties.elasticsearch().username(), properties.elasticsearch().password())
                 .host(properties.elasticsearch().host(), properties.elasticsearch().port(),
-                        properties.elasticsearch().scheme())
-                .build();
+                        properties.elasticsearch().scheme());
+                
+                if (properties.elasticsearch().username().isPresent() && properties.elasticsearch().password().isPresent()) {
+                    esConnectionConfig
+                        .authentication(properties.elasticsearch().username().get(), properties.elasticsearch().password().get());
+                }
 
-        return ElasticsearchConfiguration.create(esConnectionConfig);
+        return ElasticsearchConfiguration.create(esConnectionConfig.build());
     }
 
     @Produces

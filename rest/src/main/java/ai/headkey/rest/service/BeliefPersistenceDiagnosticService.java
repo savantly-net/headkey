@@ -1,20 +1,24 @@
 package ai.headkey.rest.service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+
+import org.jboss.logging.Logger;
+
 import ai.headkey.memory.dto.Belief;
 import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.entities.BeliefEntity;
 import ai.headkey.persistence.repositories.BeliefRepository;
 import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;
+import ai.headkey.rest.config.PostgresPersistence;
+import io.quarkus.arc.profile.IfBuildProfile;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
-import org.jboss.logging.Logger;
 
 /**
  * Diagnostic service for troubleshooting belief persistence issues.
@@ -27,6 +31,7 @@ import org.jboss.logging.Logger;
  * - Monitor belief storage service health
  */
 @ApplicationScoped
+@IfBuildProfile(PostgresPersistence.NAME)
 public class BeliefPersistenceDiagnosticService {
 
     private static final Logger LOG = Logger.getLogger(
