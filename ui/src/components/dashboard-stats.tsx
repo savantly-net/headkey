@@ -93,7 +93,7 @@ export function DashboardStats({
     }
   };
 
-  const formatNumber = (num: number) => {
+  const formatNumber = (num?: number) => {
     return num ? num.toLocaleString() : "0";
   };
 
@@ -230,14 +230,18 @@ export function DashboardStats({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics?.beliefStorage
+              {statistics?.beliefStorage?.activeBeliefs != null
                 ? formatNumber(statistics.beliefStorage.activeBeliefs)
-                : "N/A"}
+                : statistics?.beliefStorage?.operationCount != null
+                  ? formatNumber(statistics.beliefStorage.operationCount)
+                  : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics?.beliefStorage
+              {statistics?.beliefStorage?.totalBeliefs != null
                 ? `${formatNumber(statistics.beliefStorage.totalBeliefs)} total`
-                : "Beliefs not available"}
+                : statistics?.beliefStorage?.operationCount != null
+                  ? "Operations completed"
+                  : "Beliefs not available"}
             </p>
           </CardContent>
         </Card>
@@ -252,9 +256,11 @@ export function DashboardStats({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics
+              {statistics?.memorySystem?.totalOperations != null
                 ? formatNumber(statistics.memorySystem.totalOperations)
-                : "0"}
+                : statistics?.memorySystem?.operationCount != null
+                  ? formatNumber(statistics.memorySystem.operationCount)
+                  : "0"}
             </div>
             <p className="text-xs text-muted-foreground">
               All-time operations count
@@ -265,28 +271,40 @@ export function DashboardStats({
         {/* System Uptime */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Uptime</CardTitle>
+            <CardTitle className="text-sm font-medium">System Status</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics
+              {statistics?.memorySystem?.uptimeSeconds != null
                 ? formatUptime(statistics.memorySystem.uptimeSeconds)
-                : "0m"}
+                : statistics?.memorySystem?.clusterHealthy != null
+                  ? statistics.memorySystem.clusterHealthy
+                    ? "Healthy"
+                    : "Unhealthy"
+                  : "Unknown"}
             </div>
-            <p className="text-xs text-muted-foreground">Since last restart</p>
+            <p className="text-xs text-muted-foreground">
+              {statistics?.memorySystem?.uptimeSeconds != null
+                ? "Since last restart"
+                : "System status"}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Belief Conflicts */}
+        {/* Belief Conflicts / Errors */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conflicts</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {statistics?.beliefStorage?.unresolvedConflicts != null
+                ? "Conflicts"
+                : "Errors"}
+            </CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics?.beliefStorage ? (
+              {statistics?.beliefStorage?.unresolvedConflicts != null ? (
                 <span
                   className={
                     statistics.beliefStorage.unresolvedConflicts > 0
@@ -296,14 +314,26 @@ export function DashboardStats({
                 >
                   {formatNumber(statistics.beliefStorage.unresolvedConflicts)}
                 </span>
+              ) : statistics?.beliefStorage?.errorCount != null ? (
+                <span
+                  className={
+                    statistics.beliefStorage.errorCount > 0
+                      ? "text-red-600"
+                      : "text-green-600"
+                  }
+                >
+                  {formatNumber(statistics.beliefStorage.errorCount)}
+                </span>
               ) : (
                 "N/A"
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics?.beliefStorage
+              {statistics?.beliefStorage?.totalConflicts != null
                 ? `${formatNumber(statistics.beliefStorage.totalConflicts)} total conflicts`
-                : "Conflicts not available"}
+                : statistics?.beliefStorage?.errorCount != null
+                  ? "Operation errors"
+                  : "Issues not available"}
             </p>
           </CardContent>
         </Card>
@@ -324,42 +354,82 @@ export function DashboardStats({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm">Total Beliefs:</span>
-                <span className="font-medium">
-                  {formatNumber(statistics.beliefStorage.totalBeliefs)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Active Beliefs:</span>
-                <span className="font-medium">
-                  {formatNumber(statistics.beliefStorage.activeBeliefs)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Total Conflicts:</span>
-                <span className="font-medium">
-                  {formatNumber(statistics.beliefStorage.totalConflicts)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Unresolved Conflicts:</span>
-                <span className="font-medium text-amber-600">
-                  {formatNumber(statistics.beliefStorage.unresolvedConflicts)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Agent Count:</span>
-                <span className="font-medium">
-                  {formatNumber(statistics.beliefStorage.agentCount)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Storage Type:</span>
-                <span className="font-medium text-xs">
-                  {statistics.beliefStorage.storageType}
-                </span>
-              </div>
+              {statistics.beliefStorage.totalBeliefs != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Total Beliefs:</span>
+                  <span className="font-medium">
+                    {formatNumber(statistics.beliefStorage.totalBeliefs)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.activeBeliefs != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Active Beliefs:</span>
+                  <span className="font-medium">
+                    {formatNumber(statistics.beliefStorage.activeBeliefs)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.totalConflicts != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Total Conflicts:</span>
+                  <span className="font-medium">
+                    {formatNumber(statistics.beliefStorage.totalConflicts)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.unresolvedConflicts != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Unresolved Conflicts:</span>
+                  <span className="font-medium text-amber-600">
+                    {formatNumber(statistics.beliefStorage.unresolvedConflicts)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.operationCount != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Total Operations:</span>
+                  <span className="font-medium">
+                    {formatNumber(statistics.beliefStorage.operationCount)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.errorCount != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Error Count:</span>
+                  <span className="font-medium text-red-600">
+                    {formatNumber(statistics.beliefStorage.errorCount)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.agentCount != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Agent Count:</span>
+                  <span className="font-medium">
+                    {formatNumber(statistics.beliefStorage.agentCount)}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.storageType && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Storage Type:</span>
+                  <span className="font-medium text-xs">
+                    {statistics.beliefStorage.storageType}
+                  </span>
+                </div>
+              )}
+              {statistics.beliefStorage.clusterHealthy != null && (
+                <div className="flex justify-between">
+                  <span className="text-sm">Cluster Status:</span>
+                  <span
+                    className={`font-medium ${statistics.beliefStorage.clusterHealthy ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {statistics.beliefStorage.clusterHealthy
+                      ? "Healthy"
+                      : "Unhealthy"}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -418,53 +488,86 @@ export function DashboardStats({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm">Database Status:</span>
-              <Badge
-                variant={
-                  statistics?.database.entityManagerFactoryOpen
-                    ? "default"
-                    : "destructive"
-                }
-              >
-                {statistics?.database.entityManagerFactoryOpen
-                  ? "Active"
-                  : "Inactive"}
-              </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Database Type:</span>
-              <span className="font-medium text-xs">
-                {statistics?.database.configuredDatabaseKind || "Unknown"}
-              </span>
-            </div>
-            {statistics?.beliefStorage && (
+            {statistics?.database && (
               <>
                 <div className="flex justify-between">
-                  <span className="text-sm">Store Operations:</span>
-                  <span className="font-medium">
-                    {formatNumber(
-                      statistics.beliefStorage.totalStoreOperations,
-                    )}
-                  </span>
+                  <span className="text-sm">Database Status:</span>
+                  <Badge
+                    variant={
+                      statistics.database.entityManagerFactoryOpen
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {statistics.database.entityManagerFactoryOpen
+                      ? "Active"
+                      : "Inactive"}
+                  </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm">Query Operations:</span>
-                  <span className="font-medium">
-                    {formatNumber(
-                      statistics.beliefStorage.totalQueryOperations,
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Search Operations:</span>
-                  <span className="font-medium">
-                    {formatNumber(
-                      statistics.beliefStorage.totalSearchOperations,
-                    )}
+                  <span className="text-sm">Database Type:</span>
+                  <span className="font-medium text-xs">
+                    {statistics.database.configuredDatabaseKind || "Unknown"}
                   </span>
                 </div>
               </>
+            )}
+            {statistics?.elasticsearch && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm">Cluster Status:</span>
+                  <Badge
+                    variant={
+                      statistics.elasticsearch.clusterAvailable
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {statistics.elasticsearch.clusterAvailable
+                      ? "Available"
+                      : "Unavailable"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Elasticsearch Host:</span>
+                  <span className="font-medium text-xs">
+                    {statistics.elasticsearch.host}:
+                    {statistics.elasticsearch.port}
+                  </span>
+                </div>
+              </>
+            )}
+            {statistics?.beliefStorage?.totalStoreOperations != null && (
+              <div className="flex justify-between">
+                <span className="text-sm">Store Operations:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.totalStoreOperations)}
+                </span>
+              </div>
+            )}
+            {statistics?.beliefStorage?.totalQueryOperations != null && (
+              <div className="flex justify-between">
+                <span className="text-sm">Query Operations:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.totalQueryOperations)}
+                </span>
+              </div>
+            )}
+            {statistics?.beliefStorage?.totalSearchOperations != null && (
+              <div className="flex justify-between">
+                <span className="text-sm">Search Operations:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.totalSearchOperations)}
+                </span>
+              </div>
+            )}
+            {statistics?.beliefStorage?.searchTimeout != null && (
+              <div className="flex justify-between">
+                <span className="text-sm">Search Timeout:</span>
+                <span className="font-medium">
+                  {statistics.beliefStorage.searchTimeout}ms
+                </span>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -578,7 +681,7 @@ export function DashboardStats({
               <span className="text-sm font-medium">
                 {statistics
                   ? new Date(
-                      statistics.memorySystem.startTime,
+                      statistics?.memorySystem?.startTime || 0,
                     ).toLocaleDateString()
                   : "Unknown"}
               </span>

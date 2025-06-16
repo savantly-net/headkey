@@ -15,7 +15,7 @@ dependencies {
     api 'dev.langchain4j:langchain4j-core'
 
     // Elasticsearch Java Client
-    api 'co.elastic.clients:elasticsearch-java:8.13.4'
+    api 'co.elastic.clients:elasticsearch-java:8.18.2'
     api 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 
     // Jakarta JSON Processing

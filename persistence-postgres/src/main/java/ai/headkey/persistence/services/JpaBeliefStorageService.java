@@ -830,6 +830,40 @@ public class JpaBeliefStorageService implements BeliefStorageService {
 
         return info;
     }
-    // ========== Private Helper Methods ==========
-    // (Similarity calculations are now handled by the repository layer)
+
+	@Override
+	public long getTotalBeliefs() {
+        try {
+            return beliefRepository.count();
+        } catch (Exception e) {
+            throw new BeliefStorageException(
+                "Failed to count total beliefs: " + e.getMessage(),
+                e
+            );
+        }
+	}
+
+	@Override
+	public long getActiveBeliefs() {
+        try {
+            return beliefRepository.countActive();
+        } catch (Exception e) {
+            throw new BeliefStorageException(
+                "Failed to count active beliefs: " + e.getMessage(),
+                e
+            );
+        }
+	}
+
+	@Override
+	public long getTotalConflicts() {
+        try {
+            return conflictRepository.count();
+        } catch (Exception e) {
+            throw new BeliefStorageException(
+                "Failed to count total conflicts: " + e.getMessage(),
+                e
+            );
+        }
+	}
 }

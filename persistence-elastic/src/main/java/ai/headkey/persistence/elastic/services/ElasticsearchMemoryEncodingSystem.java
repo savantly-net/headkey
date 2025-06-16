@@ -33,6 +33,7 @@ import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch._types.Script;
 import co.elastic.clients.elasticsearch._types.Time;
+import co.elastic.clients.elasticsearch._types.mapping.DenseVectorSimilarity;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -95,6 +96,8 @@ public class ElasticsearchMemoryEncodingSystem
     private final int searchTimeout;
     private final int maxSimilarityResults;
     private final double similarityThreshold;
+
+    static final int DEFAULT_VECTOR_DIMENSION = 1536; // Default dimension for embeddings
 
     /**
      * Creates a new Elasticsearch memory encoding system with default
@@ -500,19 +503,25 @@ public class ElasticsearchMemoryEncodingSystem
             Query query;
 
             if (queryEmbedding != null && queryEmbedding.length > 0) {
+                // Convert embedding to float array
+                Float[] queryEmbeddingFloats = Arrays.stream(queryEmbedding)
+                        .boxed()
+                        .map(d -> d.floatValue())
+                        .toArray(Float[]::new);
+
                 // Vector similarity search
-                query = Query.of(q -> q.scriptScore(scriptScore -> scriptScore
-                        .query(Query.of(innerQ -> innerQ.bool(b -> b
-                                .must(m -> m.term(t -> t.field("agent_id").value(agentId))))))
-                        .script(Script.of(s -> s
-                                .inline(i -> i
-                                        .source("cosineSimilarity(params.query_vector, 'content_embedding') + 1.0")
-                                        .lang("painless")
-                                        .params(Map.of(
-                                                "query_vector", JsonData.of(
-                                                        Arrays.stream(queryEmbedding)
-                                                                .boxed()
-                                                                .collect(Collectors.toList())))))))));
+                query = Query.of(q -> q.knn(knn -> knn
+                        .field("content_embedding")
+                        .queryVector(Arrays.stream(queryEmbeddingFloats).collect(Collectors.toList()))
+                        .k(limit)  // Number of nearest neighbors to retrieve
+                        .numCandidates(100)  // Controls recall vs performance tradeoff
+                        .filter(Query.of(fq -> fq
+                                .term(t -> t
+                                .field("agent_id")
+                                .value(agentId)
+                                )
+                        ))
+                        ));
             } else {
                 // Text-based search
                 query = Query.of(q -> q.bool(
@@ -690,9 +699,7 @@ public class ElasticsearchMemoryEncodingSystem
                                     Query.of(m -> m.term(t -> t.field("agent_id").value(agentId))))
                             .must(
                                     Query.of(m -> m.range(r -> r
-                                            .field("created_at")
-                                            .lt(
-                                                    JsonData.of(
+                                            .date(d -> d.field("created_at").lt(
                                                             threshold.toString()))))))));
 
             SearchRequest request = SearchRequest.of(s -> s
@@ -975,9 +982,9 @@ public class ElasticsearchMemoryEncodingSystem
 
         properties.put("content_embedding", Property.of(p -> p
                 .denseVector(dv -> dv
-                        .dims(384)
+                        .dims(DEFAULT_VECTOR_DIMENSION)
                         .index(true)
-                        .similarity("cosine"))));
+                        .similarity(DenseVectorSimilarity.Cosine))));
 
         // Score fields
         properties.put("category_confidence", Property.of(p -> p

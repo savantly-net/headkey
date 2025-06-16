@@ -6,6 +6,9 @@ import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import ai.headkey.persistence.elastic.config.ElasticsearchJacksonConfig;
+
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -121,7 +124,7 @@ public class ElasticsearchConfiguration {
 
             // Create Jackson mapper with Java time support
             ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
+            ElasticsearchJacksonConfig.customize(mapper);
 
             // Create transport and client
             ElasticsearchTransport transport = new RestClientTransport(

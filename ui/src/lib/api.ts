@@ -12,10 +12,11 @@ export const API_ENDPOINTS = {
 
   // System Monitoring
   SYSTEM_HEALTH: "/api/v1/memory/health",
-  SYSTEM_JPA_HEALTH_COMPREHENSIVE: "/api/v1/system/jpa/health",
-  SYSTEM_JPA_CONFIG: "/api/v1/system/jpa/config",
-  SYSTEM_JPA_DATABASE_CAPABILITIES: "/api/v1/system/jpa/database/capabilities",
-  SYSTEM_JPA_STATISTICS: "/api/v1/system/jpa/statistics",
+  SYSTEM_HEALTH_COMPREHENSIVE: "/api/v1/system/health",
+  SYSTEM_CONFIG: "/api/v1/system/config",
+  SYSTEM_DATABASE_CAPABILITIES: "/api/v1/system/database/capabilities",
+  SYSTEM_STATISTICS: "/api/v1/system/statistics",
+  SYSTEM_PERSISTENCE: "/api/v1/system/persistence",
 
   // Belief Operations
   BELIEF_RELATIONSHIPS_STATISTICS:
@@ -277,7 +278,7 @@ export const systemApi = {
         }
       >;
       timestamp: string;
-    }>(API_ENDPOINTS.SYSTEM_JPA_HEALTH_COMPREHENSIVE);
+    }>(API_ENDPOINTS.SYSTEM_HEALTH_COMPREHENSIVE);
   },
 
   async getConfig() {
@@ -296,7 +297,7 @@ export const systemApi = {
         model_name: string;
         embedding_dimension: number;
       };
-    }>(API_ENDPOINTS.SYSTEM_JPA_CONFIG);
+    }>(API_ENDPOINTS.SYSTEM_CONFIG);
   },
 
   async getDatabaseCapabilities() {
@@ -306,11 +307,28 @@ export const systemApi = {
       max_connections: number;
       current_connections: number;
       capabilities: string[];
-    }>(API_ENDPOINTS.SYSTEM_JPA_DATABASE_CAPABILITIES);
+    }>(API_ENDPOINTS.SYSTEM_DATABASE_CAPABILITIES);
   },
 
   async getStatistics() {
-    return makeRequest<SystemStatistics>(API_ENDPOINTS.SYSTEM_JPA_STATISTICS);
+    return makeRequest<SystemStatistics>(API_ENDPOINTS.SYSTEM_STATISTICS);
+  },
+
+  async getPersistenceInfo() {
+    return makeRequest<{
+      activePersistence: string;
+      implementation: string;
+      databaseType: string;
+      capabilities: {
+        vectorSearch: boolean;
+        transactional: boolean;
+        relational: boolean;
+        fullTextSearch: boolean;
+        distributed?: boolean;
+      };
+      timestamp: string;
+      error?: string;
+    }>(API_ENDPOINTS.SYSTEM_PERSISTENCE);
   },
 };
 
@@ -373,45 +391,80 @@ export type SystemHealth = {
 };
 
 export type SystemStatistics = {
-  database: {
+  // Optional database section (JPA only)
+  database?: {
     entityManagerFactoryOpen: boolean;
     configuredDatabaseKind: string;
+  };
+  // Optional elasticsearch section (Elasticsearch only)
+  elasticsearch?: {
+    clusterAvailable: boolean;
+    autoCreateIndices: boolean;
+    searchTimeout: number;
+    host: string;
+    port: number;
   };
   memorySystem: {
     totalSearches: number;
     totalOperations: number;
-    secondLevelCacheEnabled: boolean;
-    maxSimilaritySearchResults: number;
-    totalMemories: number;
-    managedTypes: number;
-    totalUpdates: number;
-    startTime: string;
-    similarityThreshold: number;
-    totalDeletes: number;
-    batchSize: number;
-    uptimeSeconds: number;
+    // JPA-specific fields
+    secondLevelCacheEnabled?: boolean;
+    maxSimilaritySearchResults?: number;
+    totalMemories?: number;
+    managedTypes?: number;
+    totalUpdates?: number;
+    startTime?: string;
+    similarityThreshold?: number;
+    totalDeletes?: number;
+    batchSize?: number;
+    uptimeSeconds?: number;
+    // Elasticsearch-specific fields
+    operationCount?: number;
+    errorCount?: number;
+    searchTimeout?: number;
+    maxResults?: number;
+    autoCreateIndices?: boolean;
+    embeddingGeneratorAvailable?: boolean;
+    clusterHealthy?: boolean;
+    clusterError?: string;
   };
-  beliefStorage: {
-    totalBeliefs: number;
-    activeBeliefs: number;
-    totalConflicts: number;
-    unresolvedConflicts: number;
-    totalStoreOperations: number;
-    totalQueryOperations: number;
-    totalSearchOperations: number;
-    uptime: number;
-    agentCount: number;
-    storageType: string;
-    persistenceProvider: string;
-    databaseInfo: {
+  beliefStorage?: {
+    // JPA-specific belief statistics
+    totalBeliefs?: number;
+    activeBeliefs?: number;
+    totalConflicts?: number;
+    unresolvedConflicts?: number;
+    totalStoreOperations?: number;
+    totalQueryOperations?: number;
+    totalSearchOperations?: number;
+    uptime?: number;
+    agentCount?: number;
+    storageType?: string;
+    persistenceProvider?: string;
+    databaseInfo?: {
       productName: string;
       persistenceProvider: string;
       connectionPooling: string;
     };
+    // Elasticsearch-specific belief statistics
+    operationCount?: number;
+    errorCount?: number;
+    searchTimeout?: number;
+    maxResults?: number;
+    batchSize?: number;
+    autoCreateIndices?: boolean;
+    similarityThreshold?: number;
+    embeddingGeneratorAvailable?: boolean;
+    clusterHealthy?: boolean;
+    clusterError?: string;
+    statisticsError?: string;
   };
   strategy: {
     supportsVectorSearch: boolean;
     name: string;
+    // Elasticsearch-specific strategy fields
+    supportsFullTextSearch?: boolean;
+    distributedSearch?: boolean;
   };
   timestamp: string;
 };

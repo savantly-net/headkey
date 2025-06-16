@@ -1,12 +1,10 @@
 package ai.headkey.persistence.elastic.documents;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -114,8 +112,11 @@ public class MemoryDocument {
      * Date field for temporal queries and sorting.
      */
     @JsonProperty("created_at")
-    @JsonSerialize(using = InstantSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
+    @JsonFormat(
+        shape = JsonFormat.Shape.STRING,
+        pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        timezone = "UTC"
+    )
     private Instant createdAt;
 
     /**
@@ -123,8 +124,11 @@ public class MemoryDocument {
      * Date field for recency-based operations.
      */
     @JsonProperty("last_accessed")
-    @JsonSerialize(using = InstantSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
+    @JsonFormat(
+        shape = JsonFormat.Shape.STRING,
+        pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        timezone = "UTC"
+    )
     private Instant lastAccessed;
 
     /**
@@ -132,8 +136,11 @@ public class MemoryDocument {
      * Date field for modification tracking.
      */
     @JsonProperty("last_updated")
-    @JsonSerialize(using = InstantSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
+    @JsonFormat(
+        shape = JsonFormat.Shape.STRING,
+        pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        timezone = "UTC"
+    )
     private Instant lastUpdated;
 
     /**
@@ -184,7 +191,8 @@ public class MemoryDocument {
      */
     public void updateLastAccessed() {
         this.lastAccessed = Instant.now();
-        this.accessCount = (this.accessCount != null ? this.accessCount : 0) + 1;
+        this.accessCount =
+            (this.accessCount != null ? this.accessCount : 0) + 1;
     }
 
     /**
@@ -369,53 +377,95 @@ public class MemoryDocument {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MemoryDocument that = (MemoryDocument) o;
-        return Objects.equals(id, that.id) &&
-               Objects.equals(agentId, that.agentId) &&
-               Objects.equals(content, that.content) &&
-               Objects.equals(contentEmbedding, that.contentEmbedding) &&
-               Objects.equals(primaryCategory, that.primaryCategory) &&
-               Objects.equals(secondaryCategory, that.secondaryCategory) &&
-               Objects.equals(tags, that.tags) &&
-               Objects.equals(categoryConfidence, that.categoryConfidence) &&
-               Objects.equals(relevanceScore, that.relevanceScore) &&
-               Objects.equals(importanceScore, that.importanceScore) &&
-               Objects.equals(source, that.source) &&
-               Objects.equals(accessCount, that.accessCount) &&
-               Objects.equals(createdAt, that.createdAt) &&
-               Objects.equals(lastAccessed, that.lastAccessed) &&
-               Objects.equals(lastUpdated, that.lastUpdated) &&
-               Objects.equals(metadata, that.metadata) &&
-               Objects.equals(version, that.version) &&
-               Objects.equals(active, that.active);
+        return (
+            Objects.equals(id, that.id) &&
+            Objects.equals(agentId, that.agentId) &&
+            Objects.equals(content, that.content) &&
+            Objects.equals(contentEmbedding, that.contentEmbedding) &&
+            Objects.equals(primaryCategory, that.primaryCategory) &&
+            Objects.equals(secondaryCategory, that.secondaryCategory) &&
+            Objects.equals(tags, that.tags) &&
+            Objects.equals(categoryConfidence, that.categoryConfidence) &&
+            Objects.equals(relevanceScore, that.relevanceScore) &&
+            Objects.equals(importanceScore, that.importanceScore) &&
+            Objects.equals(source, that.source) &&
+            Objects.equals(accessCount, that.accessCount) &&
+            Objects.equals(createdAt, that.createdAt) &&
+            Objects.equals(lastAccessed, that.lastAccessed) &&
+            Objects.equals(lastUpdated, that.lastUpdated) &&
+            Objects.equals(metadata, that.metadata) &&
+            Objects.equals(version, that.version) &&
+            Objects.equals(active, that.active)
+        );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, agentId, content, contentEmbedding, primaryCategory,
-                          secondaryCategory, tags, categoryConfidence, relevanceScore,
-                          importanceScore, source, accessCount, createdAt, lastAccessed,
-                          lastUpdated, metadata, version, active);
+        return Objects.hash(
+            id,
+            agentId,
+            content,
+            contentEmbedding,
+            primaryCategory,
+            secondaryCategory,
+            tags,
+            categoryConfidence,
+            relevanceScore,
+            importanceScore,
+            source,
+            accessCount,
+            createdAt,
+            lastAccessed,
+            lastUpdated,
+            metadata,
+            version,
+            active
+        );
     }
 
     @Override
     public String toString() {
-        return "MemoryDocument{" +
-               "id='" + id + '\'' +
-               ", agentId='" + agentId + '\'' +
-               ", content='" + content + '\'' +
-               ", primaryCategory='" + primaryCategory + '\'' +
-               ", secondaryCategory='" + secondaryCategory + '\'' +
-               ", tags=" + tags +
-               ", categoryConfidence=" + categoryConfidence +
-               ", relevanceScore=" + relevanceScore +
-               ", importanceScore=" + importanceScore +
-               ", source='" + source + '\'' +
-               ", accessCount=" + accessCount +
-               ", createdAt=" + createdAt +
-               ", lastAccessed=" + lastAccessed +
-               ", lastUpdated=" + lastUpdated +
-               ", version=" + version +
-               ", active=" + active +
-               '}';
+        return (
+            "MemoryDocument{" +
+            "id='" +
+            id +
+            '\'' +
+            ", agentId='" +
+            agentId +
+            '\'' +
+            ", content='" +
+            content +
+            '\'' +
+            ", primaryCategory='" +
+            primaryCategory +
+            '\'' +
+            ", secondaryCategory='" +
+            secondaryCategory +
+            '\'' +
+            ", tags=" +
+            tags +
+            ", categoryConfidence=" +
+            categoryConfidence +
+            ", relevanceScore=" +
+            relevanceScore +
+            ", importanceScore=" +
+            importanceScore +
+            ", source='" +
+            source +
+            '\'' +
+            ", accessCount=" +
+            accessCount +
+            ", createdAt=" +
+            createdAt +
+            ", lastAccessed=" +
+            lastAccessed +
+            ", lastUpdated=" +
+            lastUpdated +
+            ", version=" +
+            version +
+            ", active=" +
+            active +
+            '}'
+        );
     }
 }

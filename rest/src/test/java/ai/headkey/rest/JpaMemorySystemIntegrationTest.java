@@ -1,23 +1,43 @@
 package ai.headkey.rest;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+
+import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.implementations.InformationIngestionModuleImpl;
+import ai.headkey.memory.implementations.StandardBeliefReinforcementConflictAnalyzer;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
+import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.rest.config.MemorySystemProperties;
 import ai.headkey.rest.config.PostgresPersistence;
 import ai.headkey.rest.dto.MemoryIngestionRequest;
-import ai.headkey.rest.dto.MemoryIngestionResponse;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
-import org.junit.jupiter.api.*;
+import jakarta.persistence.EntityManagerFactory;
 
 /**
  * Integration test for the refactored REST application using JPA memory system.
@@ -30,20 +50,27 @@ import org.junit.jupiter.api.*;
  * 5. Configuration properties are properly applied
  * 6. Health checks reflect the new system status
  */
+// TODO: fix this after refactoring
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class JpaMemorySystemIntegrationTest {
+class JpaMemorySystemIntegrationTest extends AbstractPostgreSQLTest {
+
+    @Inject
+    EntityManagerFactory emFactory;
+
+    @Inject
+    ContextualCategorizationEngine categorizationEngine;
 
     @Inject
     @PostgresPersistence
     JpaMemoryEncodingSystem jpaMemorySystem;
 
     @Inject
-    @PostgresPersistence
     InformationIngestionModule ingestionModule;
 
     @Inject
     MemorySystemProperties properties;
+
 
     @BeforeAll
     static void setup() {
@@ -318,7 +345,6 @@ class JpaMemorySystemIntegrationTest {
         System.out.println("✅ Input validation working with JPA backend");
     }
 
-
     @Test
     @Order(12)
     @DisplayName("Error handling should work correctly with JPA backend")
@@ -427,4 +453,5 @@ class JpaMemorySystemIntegrationTest {
             jpaMemorySystem.getSimilaritySearchStrategy().getStrategyName()
         );
     }
+
 }

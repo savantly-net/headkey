@@ -1,16 +1,13 @@
 package ai.headkey.persistence.elastic.documents;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Elasticsearch document representing a belief in the knowledge graph.
@@ -101,8 +98,11 @@ public class BeliefDocument {
      * Date field for temporal queries and sorting.
      */
     @JsonProperty("created_at")
-    @JsonSerialize(using = InstantSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
+    @JsonFormat(
+        shape = JsonFormat.Shape.STRING,
+        pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        timezone = "UTC"
+    )
     private Instant createdAt;
 
     /**
@@ -110,8 +110,11 @@ public class BeliefDocument {
      * Date field for recency-based operations.
      */
     @JsonProperty("last_updated")
-    @JsonSerialize(using = InstantSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
+    @JsonFormat(
+        shape = JsonFormat.Shape.STRING,
+        pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        timezone = "UTC"
+    )
     private Instant lastUpdated;
 
     /**

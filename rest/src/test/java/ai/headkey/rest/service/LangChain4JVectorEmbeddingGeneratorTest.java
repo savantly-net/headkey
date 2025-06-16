@@ -132,7 +132,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         }
         String largeText = largeTextBuilder.toString();
 
-        float[] mockVector = new float[384]; // Common embedding dimension
+        float[] mockVector = new float[1536]; // Common embedding dimension
         for (int i = 0; i < mockVector.length; i++) {
             mockVector[i] = (float) Math.random();
         }
@@ -147,7 +147,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
 
         // Then
         assertNotNull(result);
-        assertEquals(384, result.length);
+        assertEquals(1536, result.length);
 
         verify(embeddingModel).embed(largeText);
     }

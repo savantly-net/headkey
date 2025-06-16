@@ -127,9 +127,10 @@ public class ElasticsearchOperationsHelper {
      */
     public Query createConfidenceRangeQuery(double minConfidence, double maxConfidence) {
         return Query.of(q -> q.range(r -> r
-            .field("confidence")
-            .gte(JsonData.of(minConfidence))
-            .lte(JsonData.of(maxConfidence))
+            .number(fn -> 
+                fn.field("confidence")
+                .gte(minConfidence)
+                .lte(maxConfidence))
         ));
     }
 

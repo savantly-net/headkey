@@ -173,9 +173,9 @@ public interface MemorySystemProperties {
         /**
          * The dimension of generated embeddings.
          *
-         * @return embedding dimension, defaults to 384
+         * @return embedding dimension, defaults to 1536
          */
-        @WithDefault("384")
+        @WithDefault("1536")
         int dimension();
 
         /**

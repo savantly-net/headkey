@@ -41,12 +41,12 @@ public class JpaBeliefStorageServiceEmbeddingExample {
     private static final VectorEmbeddingGenerator mockEmbeddingGenerator =
         text -> {
             if (text == null || text.trim().isEmpty()) {
-                return new double[384]; // Standard embedding dimension
+                return new double[1536]; // Standard embedding dimension
             }
 
             // Create a simple but deterministic embedding based on text content
             // This simulates what a real embedding model would do
-            double[] embedding = new double[384];
+            double[] embedding = new double[1536];
             String normalized = text.toLowerCase().trim();
 
             // Simple approach: use character codes and word patterns

@@ -1,8 +1,27 @@
 package ai.headkey.persistence.elastic.services;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ai.headkey.memory.dto.Belief;
 import ai.headkey.memory.dto.BeliefConflict;
-import ai.headkey.memory.dto.BeliefRelationship;
 import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.elastic.configuration.ElasticsearchConfiguration;
@@ -14,8 +33,8 @@ import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.Result;
-import co.elastic.clients.elasticsearch._types.Time;
 import co.elastic.clients.elasticsearch._types.mapping.DenseVectorProperty;
+import co.elastic.clients.elasticsearch._types.mapping.DenseVectorSimilarity;
 import co.elastic.clients.elasticsearch._types.mapping.KeywordProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.mapping.TextProperty;
@@ -31,19 +50,9 @@ import co.elastic.clients.elasticsearch.core.MgetRequest;
 import co.elastic.clients.elasticsearch.core.MgetResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.IndexOperation;
 import co.elastic.clients.elasticsearch.core.mget.MultiGetOperation;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import co.elastic.clients.json.JsonData;
-import java.io.IOException;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Elasticsearch implementation of the BeliefStorageService interface.
@@ -540,7 +549,7 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
         try {
             Query confidenceQuery = Query.of(q ->
                 q.range(r ->
-                    r.field("confidence").lt(JsonData.of(confidenceThreshold))
+                    r.number(fn -> fn.field("confidence").lt(confidenceThreshold))
                 )
             );
 
@@ -671,7 +680,7 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
                     k
                         .field("statement_embedding")
                         .queryVector(embeddingList)
-                        .numCandidates((long)Math.max(limit * 2, 100))
+                        .k(limit)
                 )
             );
 
@@ -768,6 +777,29 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
                 embeddingGenerator != null
             );
 
+            // Add belief count statistics
+            try {
+                stats.put("totalBeliefs", getTotalBeliefs());
+                stats.put("activeBeliefs", getActiveBeliefs());
+                stats.put("totalConflicts", getTotalConflicts());
+                stats.put("storageType", "elasticsearch");
+                stats.put("persistenceProvider", "elasticsearch");
+
+                // Add agent count by counting unique indices
+                Set<String> beliefIndices = getAllBeliefIndices();
+                stats.put("agentCount", beliefIndices.size());
+
+                // Database information (cluster information for Elasticsearch)
+                Map<String, Object> databaseInfo = new HashMap<>();
+                databaseInfo.put("productName", "Elasticsearch");
+                databaseInfo.put("persistenceProvider", "Elasticsearch Client");
+                databaseInfo.put("connectionPooling", "Built-in HTTP Pool");
+                stats.put("databaseInfo", databaseInfo);
+            } catch (Exception e) {
+                logger.warn("Error retrieving belief statistics", e);
+                stats.put("beliefStatisticsError", e.getMessage());
+            }
+
             // Add cluster health if available
             try {
                 stats.put("clusterHealthy", config.isHealthy());
@@ -789,7 +821,10 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
 
         if (agentId != null) {
             String indexName = config.getBeliefIndexName(agentId);
-            var dist = operationsHelper.getCategoryDistribution(indexName, agentId);
+            var dist = operationsHelper.getCategoryDistribution(
+                indexName,
+                agentId
+            );
             var result = new LinkedHashMap<String, Long>();
             for (Map.Entry<FieldValue, Long> entry : dist.entrySet()) {
                 if (entry.getKey() == null) {
@@ -819,7 +854,11 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
                                 extractedAgentId
                             );
                         agentDistribution.forEach((category, count) ->
-                            totalDistribution.merge(category.stringValue(), count, Long::sum)
+                            totalDistribution.merge(
+                                category.stringValue(),
+                                count,
+                                Long::sum
+                            )
                         );
                     }
                 }
@@ -1225,7 +1264,7 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
                         d
                             .dims(1536) // Default OpenAI embedding dimension
                             .index(true)
-                            .similarity("cosine")
+                            .similarity(DenseVectorSimilarity.Cosine)
                     )
                 )
             )
@@ -1506,6 +1545,80 @@ public class ElasticsearchBeliefStorageService implements BeliefStorageService {
                 "Failed to find belief by ID: " + beliefId,
                 e
             );
+        }
+    }
+
+    @Override
+    public long getTotalBeliefs() {
+        operationCounter.incrementAndGet();
+
+        try {
+            Set<String> beliefIndices = getAllBeliefIndices();
+            long totalCount = 0;
+
+            // Count documents across all belief indices
+            for (String indexName : beliefIndices) {
+                if (operationsHelper.indexExists(indexName)) {
+                    // Count all documents (active and inactive)
+                    long count = operationsHelper.countDocuments(
+                        indexName,
+                        Query.of(q -> q.matchAll(m -> m))
+                    );
+                    totalCount += count;
+                }
+            }
+
+            return totalCount;
+        } catch (Exception e) {
+            errorCounter.incrementAndGet();
+            logger.error("Error counting total beliefs", e);
+            return 0L;
+        }
+    }
+
+    @Override
+    public long getActiveBeliefs() {
+        operationCounter.incrementAndGet();
+
+        try {
+            Set<String> beliefIndices = getAllBeliefIndices();
+            long activeCount = 0;
+
+            // Count only active documents across all belief indices
+            for (String indexName : beliefIndices) {
+                if (operationsHelper.indexExists(indexName)) {
+                    // Count only active beliefs
+                    long count = operationsHelper.countDocuments(
+                        indexName,
+                        operationsHelper.createActiveQuery(true)
+                    );
+                    activeCount += count;
+                }
+            }
+
+            return activeCount;
+        } catch (Exception e) {
+            errorCounter.incrementAndGet();
+            logger.error("Error counting active beliefs", e);
+            return 0L;
+        }
+    }
+
+    @Override
+    public long getTotalConflicts() {
+        operationCounter.incrementAndGet();
+
+        try {
+            // Since conflict management is not yet implemented in Elasticsearch,
+            // we return 0 for now. This maintains API compatibility while
+            // indicating that conflict tracking is not available.
+            // TODO: Implement conflict index management and counting when
+            // conflict storage is added to Elasticsearch persistence
+            return 0L;
+        } catch (Exception e) {
+            errorCounter.incrementAndGet();
+            logger.error("Error counting total conflicts", e);
+            return 0L;
         }
     }
 }

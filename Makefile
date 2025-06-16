@@ -25,14 +25,16 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD)
 .PHONY: run-postgres
 run-postgres:
 	@echo "Running app with postgres..."
-	docker compose up -d postgres
+	docker compose --profile postgres up -d
 	./gradlew rest:quarkusDev -Dquarkus.profile=prod
+	docker compose --profile postgres down
 
 .PHONY: run-elasticsearch
 run-elasticsearch:
 	@echo "Running app with Elasticsearch..."
-	docker compose up -d elasticsearch
-	./gradlew rest:quarkusDev -Dquarkus.profile=elasticsearch-prod
+	docker compose --profile elasticsearch up -d
+	./gradlew rest:quarkusDev -Dquarkus.profile=elasticsearch
+	docker compose --profile elasticsearch down
 
 .PHONY: run
 run: run-elasticsearch

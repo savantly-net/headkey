@@ -375,7 +375,7 @@ headkey.memory.performance.enable-async=false
 ### Unit Testing
 ```java
 // Mock embedding generator
-VectorEmbeddingGenerator mockGenerator = content -> new double[384];
+VectorEmbeddingGenerator mockGenerator = content -> new double[1536];
 
 // Test memory system
 MemoryEncodingSystem system = new JpaMemoryEncodingSystem(emf, mockGenerator);
