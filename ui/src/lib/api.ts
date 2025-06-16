@@ -12,10 +12,10 @@ export const API_ENDPOINTS = {
 
   // System Monitoring
   SYSTEM_HEALTH: "/api/v1/memory/health",
-  SYSTEM_HEALTH_COMPREHENSIVE: "/api/v1/system/health",
-  SYSTEM_CONFIG: "/api/v1/system/config",
-  SYSTEM_DATABASE_CAPABILITIES: "/api/v1/system/database/capabilities",
-  SYSTEM_STATISTICS: "/api/v1/system/statistics",
+  SYSTEM_JPA_HEALTH_COMPREHENSIVE: "/api/v1/system/jpa/health",
+  SYSTEM_JPA_CONFIG: "/api/v1/system/jpa/config",
+  SYSTEM_JPA_DATABASE_CAPABILITIES: "/api/v1/system/jpa/database/capabilities",
+  SYSTEM_JPA_STATISTICS: "/api/v1/system/jpa/statistics",
 
   // Belief Operations
   BELIEF_RELATIONSHIPS_STATISTICS:
@@ -277,7 +277,7 @@ export const systemApi = {
         }
       >;
       timestamp: string;
-    }>(API_ENDPOINTS.SYSTEM_HEALTH_COMPREHENSIVE);
+    }>(API_ENDPOINTS.SYSTEM_JPA_HEALTH_COMPREHENSIVE);
   },
 
   async getConfig() {
@@ -296,7 +296,7 @@ export const systemApi = {
         model_name: string;
         embedding_dimension: number;
       };
-    }>(API_ENDPOINTS.SYSTEM_CONFIG);
+    }>(API_ENDPOINTS.SYSTEM_JPA_CONFIG);
   },
 
   async getDatabaseCapabilities() {
@@ -306,11 +306,11 @@ export const systemApi = {
       max_connections: number;
       current_connections: number;
       capabilities: string[];
-    }>(API_ENDPOINTS.SYSTEM_DATABASE_CAPABILITIES);
+    }>(API_ENDPOINTS.SYSTEM_JPA_DATABASE_CAPABILITIES);
   },
 
   async getStatistics() {
-    return makeRequest<SystemStatistics>(API_ENDPOINTS.SYSTEM_STATISTICS);
+    return makeRequest<SystemStatistics>(API_ENDPOINTS.SYSTEM_JPA_STATISTICS);
   },
 };
 
@@ -390,6 +390,24 @@ export type SystemStatistics = {
     totalDeletes: number;
     batchSize: number;
     uptimeSeconds: number;
+  };
+  beliefStorage: {
+    totalBeliefs: number;
+    activeBeliefs: number;
+    totalConflicts: number;
+    unresolvedConflicts: number;
+    totalStoreOperations: number;
+    totalQueryOperations: number;
+    totalSearchOperations: number;
+    uptime: number;
+    agentCount: number;
+    storageType: string;
+    persistenceProvider: string;
+    databaseInfo: {
+      productName: string;
+      persistenceProvider: string;
+      connectionPooling: string;
+    };
   };
   strategy: {
     supportsVectorSearch: boolean;

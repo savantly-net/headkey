@@ -44,7 +44,7 @@ export default function RootLayout({
           <div className="min-h-screen flex w-full">
             <AppSidebar />
             <main className="flex-1 flex flex-col">
-              <div className="flex items-center gap-4 p-4 border-b border-gray-200 bg-white">
+              <div className="sticky flex items-center gap-4 p-4 border-b border-gray-200 bg-white">
                 <SidebarTrigger />
                 <h3 className="font-semibold">
                   HeadKey - AI Memory Management

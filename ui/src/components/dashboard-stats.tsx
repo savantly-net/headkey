@@ -14,11 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   systemApi,
-  beliefApi,
   handleApiError,
   type SystemHealth,
   type SystemStatistics,
-  type BeliefStatistics,
 } from "@/lib/api";
 import {
   Activity,
@@ -46,7 +44,6 @@ export function DashboardStats({
 }: DashboardStatsProps) {
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [statistics, setStatistics] = useState<SystemStatistics | null>(null);
-  const [beliefStats, setBeliefStats] = useState<BeliefStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
@@ -63,17 +60,6 @@ export function DashboardStats({
 
       setHealth(healthData);
       setStatistics(statsData);
-
-      // Try to fetch belief statistics for default agent
-      try {
-        const beliefData = await beliefApi.getStatistics("default-agent");
-        console.log("Belief data:", beliefData);
-        setBeliefStats(beliefData);
-      } catch (beliefError) {
-        console.log("Belief stats not available:", beliefError);
-        setBeliefStats(null);
-      }
-
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -244,11 +230,13 @@ export function DashboardStats({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {beliefStats ? formatNumber(beliefStats.activeBeliefs) : "N/A"}
+              {statistics?.beliefStorage
+                ? formatNumber(statistics.beliefStorage.activeBeliefs)
+                : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {beliefStats
-                ? `${formatNumber(beliefStats.totalBeliefs)} total`
+              {statistics?.beliefStorage
+                ? `${formatNumber(statistics.beliefStorage.totalBeliefs)} total`
                 : "Beliefs not available"}
             </p>
           </CardContent>
@@ -290,22 +278,32 @@ export function DashboardStats({
           </CardContent>
         </Card>
 
-        {/* Database Status */}
+        {/* Belief Conflicts */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Database</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Conflicts</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statistics?.database.entityManagerFactoryOpen ? (
-                <span className="text-green-600">Active</span>
+              {statistics?.beliefStorage ? (
+                <span
+                  className={
+                    statistics.beliefStorage.unresolvedConflicts > 0
+                      ? "text-amber-600"
+                      : "text-green-600"
+                  }
+                >
+                  {formatNumber(statistics.beliefStorage.unresolvedConflicts)}
+                </span>
               ) : (
-                <span className="text-red-600">Inactive</span>
+                "N/A"
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {statistics?.database.configuredDatabaseKind || "Unknown"}
+              {statistics?.beliefStorage
+                ? `${formatNumber(statistics.beliefStorage.totalConflicts)} total conflicts`
+                : "Conflicts not available"}
             </p>
           </CardContent>
         </Card>
@@ -313,6 +311,58 @@ export function DashboardStats({
 
       {/* Detailed Stats */}
       <div className="grid gap-4 md:grid-cols-3">
+        {/* Belief Storage Details */}
+        {statistics?.beliefStorage && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Belief Storage
+              </CardTitle>
+              <CardDescription>
+                Detailed belief system statistics
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm">Total Beliefs:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.totalBeliefs)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Active Beliefs:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.activeBeliefs)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Total Conflicts:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.totalConflicts)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Unresolved Conflicts:</span>
+                <span className="font-medium text-amber-600">
+                  {formatNumber(statistics.beliefStorage.unresolvedConflicts)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Agent Count:</span>
+                <span className="font-medium">
+                  {formatNumber(statistics.beliefStorage.agentCount)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Storage Type:</span>
+                <span className="font-medium text-xs">
+                  {statistics.beliefStorage.storageType}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {/* Memory System Details */}
         <Card>
           <CardHeader>
@@ -356,54 +406,65 @@ export function DashboardStats({
           </CardContent>
         </Card>
 
-        {/* Belief System Details */}
+        {/* Database & Operations */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Belief System
+              <Database className="h-5 w-5" />
+              Database & Operations
             </CardTitle>
             <CardDescription>
-              Agent belief formation and relationships
+              Database status and operation statistics
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {beliefStats ? (
+            <div className="flex justify-between">
+              <span className="text-sm">Database Status:</span>
+              <Badge
+                variant={
+                  statistics?.database.entityManagerFactoryOpen
+                    ? "default"
+                    : "destructive"
+                }
+              >
+                {statistics?.database.entityManagerFactoryOpen
+                  ? "Active"
+                  : "Inactive"}
+              </Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm">Database Type:</span>
+              <span className="font-medium text-xs">
+                {statistics?.database.configuredDatabaseKind || "Unknown"}
+              </span>
+            </div>
+            {statistics?.beliefStorage && (
               <>
                 <div className="flex justify-between">
-                  <span className="text-sm">Total Relationships:</span>
+                  <span className="text-sm">Store Operations:</span>
                   <span className="font-medium">
-                    {formatNumber(beliefStats.totalRelationships)}
+                    {formatNumber(
+                      statistics.beliefStorage.totalStoreOperations,
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm">High Confidence:</span>
+                  <span className="text-sm">Query Operations:</span>
                   <span className="font-medium">
-                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.high)}
+                    {formatNumber(
+                      statistics.beliefStorage.totalQueryOperations,
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm">Medium Confidence:</span>
+                  <span className="text-sm">Search Operations:</span>
                   <span className="font-medium">
-                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.medium)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Low Confidence:</span>
-                  <span className="font-medium">
-                    {formatNumber(beliefStats.beliefsByConfidenceLevel?.low)}
+                    {formatNumber(
+                      statistics.beliefStorage.totalSearchOperations,
+                    )}
                   </span>
                 </div>
               </>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">
-                  Belief statistics not available
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Requires agent with beliefs
-                </p>
-              </div>
             )}
           </CardContent>
         </Card>
