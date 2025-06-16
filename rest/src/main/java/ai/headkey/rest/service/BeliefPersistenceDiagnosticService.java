@@ -1,7 +1,7 @@
 package ai.headkey.rest.service;
 
 import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.entities.BeliefEntity;
 import ai.headkey.persistence.repositories.BeliefRepository;
 import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;

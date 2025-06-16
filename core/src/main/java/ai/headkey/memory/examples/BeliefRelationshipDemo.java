@@ -1,13 +1,16 @@
 package ai.headkey.memory.examples;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.dto.BeliefRelationship;
 import ai.headkey.memory.dto.BeliefKnowledgeGraph;
+import ai.headkey.memory.dto.BeliefRelationship;
 import ai.headkey.memory.enums.RelationshipType;
 import ai.headkey.memory.implementations.InMemoryBeliefRelationshipService;
-
-import java.time.Instant;
-import java.util.*;
 
 /**
  * Demonstration class showing how to use the belief relationship system
@@ -159,78 +162,6 @@ public class BeliefRelationshipDemo {
     }
     
     /**
-     * Demonstrates knowledge graph operations and analytics.
-     */
-    public void demonstrateKnowledgeGraphAnalytics() {
-        System.out.println("=== Knowledge Graph Analytics (Performance Comparison) ===");
-        
-        // Performance comparison: Old vs New methods
-        System.out.println("\n--- OLD METHOD (Deprecated - loads full graph) ---");
-        long startTime = System.currentTimeMillis();
-        
-        BeliefKnowledgeGraph graph = relationshipService.getKnowledgeGraph(agentId);
-        System.out.println("⚠️  DEPRECATED: getKnowledgeGraph() - loads full graph into memory");
-        System.out.println("Knowledge graph contains:");
-        System.out.println("  - Beliefs: " + graph.getBeliefs().size());
-        System.out.println("  - Relationships: " + graph.getRelationships().size());
-        
-        Map<String, Object> oldStats = relationshipService.getKnowledgeGraphStatistics(agentId);
-        System.out.println("⚠️  DEPRECATED: Graph statistics (loads full graph):");
-        oldStats.forEach((key, value) -> System.out.println("  - " + key + ": " + value));
-        
-        List<String> oldValidation = relationshipService.validateKnowledgeGraph(agentId);
-        System.out.println("⚠️  DEPRECATED: Validation issues (loads full graph): " + oldValidation.size());
-        
-        long oldMethodTime = System.currentTimeMillis() - startTime;
-        System.out.println("Old method execution time: " + oldMethodTime + "ms");
-        
-        System.out.println("\n--- NEW EFFICIENT METHODS (Recommended) ---");
-        startTime = System.currentTimeMillis();
-        
-        // Use new efficient methods
-        Map<String, Object> efficientStats = relationshipService.getEfficientGraphStatistics(agentId);
-        System.out.println("✅ EFFICIENT: Graph statistics (database-level):");
-        efficientStats.forEach((key, value) -> System.out.println("  - " + key + ": " + value));
-        
-        List<String> efficientValidation = relationshipService.performEfficientGraphValidation(agentId);
-        System.out.println("✅ EFFICIENT: Validation issues (database queries): " + efficientValidation.size());
-        if (!efficientValidation.isEmpty()) {
-            efficientValidation.forEach(issue -> System.out.println("  - " + issue));
-        }
-        
-        // Demonstrate lightweight snapshot for small operations
-        BeliefKnowledgeGraph snapshot = relationshipService.createSnapshotGraph(agentId, false);
-        System.out.println("✅ EFFICIENT: Lightweight snapshot (active only):");
-        System.out.println("  - Beliefs: " + snapshot.getBeliefs().size());
-        System.out.println("  - Relationships: " + snapshot.getRelationships().size());
-        
-        long newMethodTime = System.currentTimeMillis() - startTime;
-        System.out.println("New efficient methods execution time: " + newMethodTime + "ms");
-        
-        // Performance summary
-        System.out.println("\n--- PERFORMANCE SUMMARY ---");
-        System.out.println("Performance improvement: " + 
-            (oldMethodTime > newMethodTime ? 
-                ((oldMethodTime - newMethodTime) * 100 / oldMethodTime) + "% faster" :
-                "Similar performance (small dataset)"));
-        
-        // Find belief clusters (still uses efficient method)
-        Map<String, Set<String>> clusters = relationshipService.findBeliefClusters(agentId, 0.7);
-        System.out.println("Belief clusters (strength ≥ 0.7): " + clusters.size());
-        clusters.forEach((clusterName, beliefs) -> 
-            System.out.println("  - " + clusterName + ": " + beliefs.size() + " beliefs"));
-        
-        // Find potential conflicts
-        List<Map<String, Object>> conflicts = relationshipService.findPotentialConflicts(agentId);
-        System.out.println("Potential conflicts detected: " + conflicts.size());
-        conflicts.forEach(conflict -> 
-            System.out.println("  - " + conflict.get("relationshipType") + " between " + 
-                             conflict.get("sourceBeliefId") + " and " + conflict.get("targetBeliefId")));
-        
-        System.out.println();
-    }
-    
-    /**
      * Demonstrates the new efficient graph snapshot creation methods.
      */
     public void demonstrateEfficientGraphOperations() {
@@ -303,14 +234,6 @@ public class BeliefRelationshipDemo {
         );
         System.out.println("CONTRADICTS relationships: " + contradictRels.size());
         
-        // Find similar beliefs based on relationship patterns
-        List<Map<String, Object>> similar = relationshipService.findSimilarBeliefs("belief-001", agentId, 0.1);
-        System.out.println("Beliefs similar to belief-001: " + similar.size());
-        similar.forEach(sim -> 
-            System.out.println("  - " + sim.get("beliefId") + " (similarity: " + 
-                             String.format("%.3f", (Double) sim.get("similarity")) + ")"));
-        
-        System.out.println();
     }
     
     /**
@@ -406,13 +329,7 @@ public class BeliefRelationshipDemo {
         
         System.out.println("Scenario Analysis:");
         System.out.println("- Deprecated beliefs: " + relationshipService.findDeprecatedBeliefs(agentId));
-        System.out.println("- Conflicting relationships: " + relationshipService.findPotentialConflicts(agentId).size());
-        System.out.println("- Related beliefs to pref-001: " + relationshipService.findRelatedBeliefs("pref-001", agentId, 2));
-        
-        BeliefKnowledgeGraph finalGraph = relationshipService.getActiveKnowledgeGraph(agentId);
-        System.out.println("- Final active graph: " + finalGraph.getBeliefs().size() + " beliefs, " + 
-                          finalGraph.getRelationships().size() + " relationships");
-        
+    
         System.out.println();
     }
     
@@ -430,7 +347,6 @@ public class BeliefRelationshipDemo {
             demo.demonstrateBasicRelationships();
             demo.demonstrateTemporalRelationships();
             demo.demonstrateGraphTraversal();
-            demo.demonstrateKnowledgeGraphAnalytics();
             demo.demonstrateEfficientGraphOperations();
             demo.demonstrateAdvancedOperations();
             demo.demonstrateDeprecationChain();

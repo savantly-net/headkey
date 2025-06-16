@@ -103,10 +103,10 @@ class InMemoryBeliefGraphQueryServiceTest {
 
     @Test
     void testGetBeliefsByCategory() {
-        List<Belief> observationBeliefs = service.getBeliefsByCategory(AGENT_ID, "observation", 0);
+        List<Belief> observationBeliefs = service.getBeliefsInCategory(AGENT_ID, "observation", 0);
         assertEquals(2, observationBeliefs.size());
         
-        List<Belief> unknownBeliefs = service.getBeliefsByCategory(AGENT_ID, "unknown", 0);
+        List<Belief> unknownBeliefs = service.getBeliefsInCategory(AGENT_ID, "unknown", 0);
         assertEquals(0, unknownBeliefs.size());
     }
 

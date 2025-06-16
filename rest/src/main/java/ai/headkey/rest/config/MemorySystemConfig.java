@@ -1,30 +1,27 @@
 package ai.headkey.rest.config;
 
-import io.quarkus.logging.Log;
-
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
-import ai.headkey.memory.implementations.InMemoryBeliefReinforcementConflictAnalyzer;
-import ai.headkey.persistence.services.JpaBeliefStorageService;
 import ai.headkey.memory.implementations.InMemoryContextualCategorizationEngine;
 import ai.headkey.memory.implementations.InformationIngestionModuleImpl;
 import ai.headkey.memory.implementations.SimplePatternBeliefExtractionService;
 import ai.headkey.memory.implementations.StandardBeliefReinforcementConflictAnalyzer;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
 import ai.headkey.memory.interfaces.BeliefRelationshipService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.memory.interfaces.ContextualCategorizationEngine;
 import ai.headkey.memory.interfaces.InformationIngestionModule;
-import ai.headkey.persistence.repositories.BeliefRepository;
-import ai.headkey.persistence.repositories.BeliefConflictRepository;
-import ai.headkey.persistence.repositories.BeliefRelationshipRepository;
-import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;
-import ai.headkey.persistence.repositories.impl.JpaBeliefConflictRepository;
-import ai.headkey.persistence.repositories.impl.BeliefRelationshipRepositoryImpl;
-import ai.headkey.persistence.services.JpaBeliefRelationshipService;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.memory.langchain4j.LangChain4JBeliefExtractionService;
 import ai.headkey.memory.langchain4j.LangChain4JContextualCategorizationEngine;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaMemorySystemFactory;
+import ai.headkey.persistence.repositories.BeliefConflictRepository;
+import ai.headkey.persistence.repositories.BeliefRelationshipRepository;
+import ai.headkey.persistence.repositories.BeliefRepository;
+import ai.headkey.persistence.repositories.impl.BeliefRelationshipRepositoryImpl;
+import ai.headkey.persistence.repositories.impl.JpaBeliefConflictRepository;
+import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;
+import ai.headkey.persistence.services.JpaBeliefRelationshipService;
+import ai.headkey.persistence.services.JpaBeliefStorageService;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
@@ -37,6 +34,7 @@ import ai.headkey.rest.service.QuarkusCategoryExtractionService;
 import ai.headkey.rest.service.QuarkusTagExtractionService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
@@ -44,28 +42,18 @@ import jakarta.inject.Singleton;
 import jakarta.persistence.EntityManager;
 
 /**
- * CDI Configuration for Memory System Components.
+ * Legacy CDI Configuration for Memory System Components.
  *
- * This configuration class provides CDI beans for the JPA-based memory system components,
- * ensuring proper dependency injection and lifecycle management throughout the
- * REST application.
+ * This configuration class is deprecated in favor of the new persistence-specific
+ * configurations (PostgresPersistenceConfiguration, ElasticsearchPersistenceConfiguration)
+ * and the PersistenceConfigurationSelector.
  *
- * The configuration follows the 12-factor app principles by:
- * - Separating configuration from code
- * - Using dependency injection for testability
- * - Providing singleton instances for stateless services
- * - Supporting configurable database backends
+ * This class is kept for backward compatibility but will be removed in a future version.
+ * New implementations should use the persistence-specific configurations.
  *
- * Database Configuration:
- * - Development: H2 in-memory database
- * - Test: H2 in-memory database
- * - Production: PostgreSQL (configurable via environment variables)
- *
- * Memory System Features:
- * - Automatic similarity search strategy detection
- * - Configurable performance parameters
- * - Database-specific optimizations
+ * @deprecated Use {@link PersistenceConfigurationSelector} with persistence-specific configurations
  */
+@Deprecated
 @ApplicationScoped
 public class MemorySystemConfig {
 
@@ -84,22 +72,20 @@ public class MemorySystemConfig {
     jakarta.enterprise.inject.Instance<ChatModel> chatModel;
 
     /**
-     * Produces the JPA-based MemoryEncodingSystem as a CDI bean.
+     * Legacy producer for JPA-based MemoryEncodingSystem.
      *
-     * This method creates and configures the JPA memory system using the
-     * JpaMemorySystemFactory with the appropriate similarity search strategy
-     * based on configuration and database capabilities.
-     *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of JpaMemoryEncodingSystem
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public JpaMemoryEncodingSystem jpaMemoryEncodingSystem() {
         Log.info("Initializing JpaMemoryEncodingSystem for CDI");
 
         try {
             // Create LangChain4J embedding generator
-            AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator =
+            VectorEmbeddingGenerator embeddingGenerator =
                 createLangChain4JEmbeddingGenerator();
 
             // Create similarity search strategy based on configuration
@@ -142,98 +128,134 @@ public class MemorySystemConfig {
     }
 
     /**
-     * Produces the ContextualCategorizationEngine as a CDI bean.
+     * Legacy producer for ContextualCategorizationEngine.
      *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of ContextualCategorizationEngine
      */
-    @Produces
-    @Singleton
-    public ContextualCategorizationEngine contextualCategorizationEngine(QuarkusCategoryExtractionService categoryService, QuarkusTagExtractionService tagService) {
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
+    public ContextualCategorizationEngine contextualCategorizationEngine(
+        QuarkusCategoryExtractionService categoryService,
+        QuarkusTagExtractionService tagService
+    ) {
         Log.info("Creating ContextualCategorizationEngine");
         if (chatModel.isUnsatisfied()) {
-            Log.info("ChatModel not available, using InMemoryContextualCategorizationEngine");
+            Log.info(
+                "ChatModel not available, using InMemoryContextualCategorizationEngine"
+            );
             return new InMemoryContextualCategorizationEngine();
         }
 
         // Initialize the categorization engine
         Log.info("Creating LangChain4JContextualCategorizationEngine");
-        return new LangChain4JContextualCategorizationEngine(categoryService, tagService);
+        return new LangChain4JContextualCategorizationEngine(
+            categoryService,
+            tagService
+        );
     }
 
     /**
-     * Produces the BeliefExtractionService as a CDI bean.
+     * Legacy producer for BeliefExtractionService.
      *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of BeliefExtractionService
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public BeliefExtractionService beliefExtractionService() {
         if (chatModel.isUnsatisfied()) {
-            Log.info("ChatModel not available, using SimplePatternBeliefExtractionService");
+            Log.info(
+                "ChatModel not available, using SimplePatternBeliefExtractionService"
+            );
             return new SimplePatternBeliefExtractionService();
         }
-        
+
         try {
             ChatModel model = chatModel.get();
-            Log.infof("Creating LangChain4JBeliefExtractionService with model: %s", 
-                model.getClass().getSimpleName());
+            Log.infof(
+                "Creating LangChain4JBeliefExtractionService with model: %s",
+                model.getClass().getSimpleName()
+            );
             return new LangChain4JBeliefExtractionService(model);
         } catch (Exception e) {
-            Log.errorf(e, "Failed to create LangChain4JBeliefExtractionService, falling back to simple implementation");
+            Log.errorf(
+                e,
+                "Failed to create LangChain4JBeliefExtractionService, falling back to simple implementation"
+            );
             return new SimplePatternBeliefExtractionService();
         }
     }
 
     /**
-     * Produces the BeliefStorageService as a CDI bean.
+     * Legacy producer for BeliefStorageService.
      *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of BeliefStorageService
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public BeliefStorageService beliefStorageService() {
         Log.info("Creating JpaBeliefStorageService");
-        
+
         // Create LangChain4J embedding generator
-        AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator =
+        VectorEmbeddingGenerator embeddingGenerator =
             createLangChain4JEmbeddingGenerator();
         // Create repository dependencies
-        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory(), embeddingGenerator);
-        BeliefConflictRepository conflictRepository = new JpaBeliefConflictRepository(entityManager.getEntityManagerFactory());
-        return new JpaBeliefStorageService(beliefRepository, conflictRepository);
+        BeliefRepository beliefRepository = new JpaBeliefRepository(
+            entityManager.getEntityManagerFactory(),
+            embeddingGenerator
+        );
+        BeliefConflictRepository conflictRepository =
+            new JpaBeliefConflictRepository(
+                entityManager.getEntityManagerFactory()
+            );
+        return new JpaBeliefStorageService(
+            beliefRepository,
+            conflictRepository
+        );
     }
 
     /**
-     * Produces the BeliefReinforcementConflictAnalyzer as a CDI bean.
+     * Legacy producer for BeliefReinforcementConflictAnalyzer.
      *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @param beliefExtractionService The belief extraction service
      * @param beliefStorageService The belief storage service
      * @return A singleton instance of BeliefReinforcementConflictAnalyzer
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public BeliefReinforcementConflictAnalyzer beliefReinforcementConflictAnalyzer(
         BeliefExtractionService beliefExtractionService,
         BeliefStorageService beliefStorageService
     ) {
-        Log.infof("Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s", 
-            beliefExtractionService.getClass().getSimpleName());
-        return new StandardBeliefReinforcementConflictAnalyzer(beliefExtractionService, beliefStorageService);
+        Log.infof(
+            "Creating InMemoryBeliefReinforcementConflictAnalyzer with extraction service: %s",
+            beliefExtractionService.getClass().getSimpleName()
+        );
+        return new StandardBeliefReinforcementConflictAnalyzer(
+            beliefExtractionService,
+            beliefStorageService
+        );
     }
 
     /**
-     * Produces the InformationIngestionModule as a CDI bean.
+     * Legacy producer for InformationIngestionModule.
      *
-     * This creates the refactored adapter that uses InformationIngestionModuleImpl
-     * with proper separation of concerns through dependency injection.
-     *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @param categorizationEngine The categorization engine
      * @param memorySystem The JPA memory encoding system
      * @param beliefAnalyzer The belief analysis system
      * @return A singleton instance of InformationIngestionModule
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public InformationIngestionModule informationIngestionModule(
         ContextualCategorizationEngine categorizationEngine,
         JpaMemoryEncodingSystem memorySystem,
@@ -251,37 +273,41 @@ public class MemorySystemConfig {
     }
 
     /**
-     * Produces the BeliefRelationshipService as a CDI bean.
+     * Legacy producer for BeliefRelationshipService.
      *
-     * This creates a JPA-based implementation of the belief relationship service
-     * with persistent storage using PostgreSQL.
-     *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of BeliefRelationshipService
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public BeliefRelationshipService beliefRelationshipService() {
         Log.info("Creating JpaBeliefRelationshipService");
-        
+
         // Create repository dependencies
-        BeliefRepository beliefRepository = new JpaBeliefRepository(entityManager.getEntityManagerFactory());
-        BeliefRelationshipRepository relationshipRepository = new BeliefRelationshipRepositoryImpl(entityManager);
-        
-        return new JpaBeliefRelationshipService(relationshipRepository, beliefRepository);
+        BeliefRepository beliefRepository = new JpaBeliefRepository(
+            entityManager.getEntityManagerFactory()
+        );
+        BeliefRelationshipRepository relationshipRepository =
+            new BeliefRelationshipRepositoryImpl(entityManager);
+
+        return new JpaBeliefRelationshipService(
+            relationshipRepository,
+            beliefRepository
+        );
     }
 
     /**
-     * Produces the MemoryDtoMapper as a CDI bean.
+     * Legacy producer for MemoryDtoMapper.
      *
-     * The mapper is stateless and can be safely shared across the application
-     * as a singleton.
-     *
+     * @deprecated This producer is disabled to avoid conflicts with the new persistence selector
      * @return A singleton instance of MemoryDtoMapper
      */
-    @Produces
-    @Singleton
+    @Deprecated
+    // @Produces - Commented out to avoid conflicts with PersistenceConfigurationSelector
+    // @Singleton
     public MemoryDtoMapper memoryDtoMapper() {
-        Log.debug("Creating MemoryDtoMapper bean");
+        Log.debug("Creating MemoryDtoMapper bean (legacy)");
         return new MemoryDtoMapper();
     }
 
@@ -326,14 +352,16 @@ public class MemorySystemConfig {
      *
      * @return A LangChain4J-based vector embedding generator
      */
-    private AbstractMemoryEncodingSystem.VectorEmbeddingGenerator createLangChain4JEmbeddingGenerator() {
+    private VectorEmbeddingGenerator createLangChain4JEmbeddingGenerator() {
         if (!properties.embedding().enabled()) {
             Log.info("Vector embedding generation disabled by configuration");
             return createFallbackEmbeddingGenerator();
         }
 
         if (embeddingModel.isUnsatisfied()) {
-            Log.warn("No EmbeddingModel bean available, falling back to mock generator");
+            Log.warn(
+                "No EmbeddingModel bean available, falling back to mock generator"
+            );
             return createFallbackEmbeddingGenerator();
         }
 
@@ -361,7 +389,7 @@ public class MemorySystemConfig {
      *
      * @return A simple mock embedding generator
      */
-    private AbstractMemoryEncodingSystem.VectorEmbeddingGenerator createFallbackEmbeddingGenerator() {
+    private VectorEmbeddingGenerator createFallbackEmbeddingGenerator() {
         Log.warn(
             "Using fallback mock embedding generator - not suitable for production"
         );

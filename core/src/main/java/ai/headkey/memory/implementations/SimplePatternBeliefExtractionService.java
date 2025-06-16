@@ -1,7 +1,7 @@
 package ai.headkey.memory.implementations;
 
 import ai.headkey.memory.dto.CategoryLabel;
-import ai.headkey.memory.spi.BeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 
 import java.util.*;
 import java.util.regex.Pattern;

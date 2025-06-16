@@ -3,9 +3,9 @@ package ai.headkey.memory.abstracts;
 import ai.headkey.memory.dto.*;
 import ai.headkey.memory.enums.ConflictResolution;
 import ai.headkey.memory.exceptions.StorageException;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 
 import java.time.Instant;
 import java.util.*;

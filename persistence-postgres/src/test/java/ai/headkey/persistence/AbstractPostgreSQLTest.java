@@ -1,6 +1,6 @@
 package ai.headkey.persistence;
 
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -44,10 +44,10 @@ public abstract class AbstractPostgreSQLTest {
 
     /**
      * PostgreSQL TestContainer with test database configuration.
-     * Uses PostgreSQL 15 Alpine for faster startup times.
+     * Uses PGVector extension for vector support.
      */
     @Container
-    protected static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
+    protected static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg17")
             .withDatabaseName("headkey_test")
             .withUsername("test_user")
             .withPassword("test_password")

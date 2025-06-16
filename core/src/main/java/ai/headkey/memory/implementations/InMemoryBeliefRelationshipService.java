@@ -1,16 +1,27 @@
 package ai.headkey.memory.implementations;
 
-import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.dto.BeliefRelationship;
-import ai.headkey.memory.dto.BeliefKnowledgeGraph;
-import ai.headkey.memory.enums.RelationshipType;
-import ai.headkey.memory.interfaces.BeliefRelationshipService;
-import ai.headkey.memory.interfaces.BeliefGraphQueryService;
-
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
+import ai.headkey.memory.dto.Belief;
+import ai.headkey.memory.dto.BeliefKnowledgeGraph;
+import ai.headkey.memory.dto.BeliefRelationship;
+import ai.headkey.memory.enums.RelationshipType;
+import ai.headkey.memory.interfaces.BeliefGraphQueryService;
+import ai.headkey.memory.interfaces.BeliefRelationshipService;
 
 /**
  * In-memory implementation of BeliefRelationshipService for development and testing.
@@ -323,105 +334,6 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
                 .forEach(rel -> findRelatedBeliefsRecursive(rel.getSourceBeliefId(), related, visited, currentDepth + 1, maxDepth, agentId));
     }
     
-    @Override
-    public List<Map<String, Object>> findSimilarBeliefs(String beliefId, String agentId, double similarityThreshold) {
-        // Simple implementation based on shared relationships
-        List<Map<String, Object>> similarBeliefs = new ArrayList<>();
-        
-        List<BeliefRelationship> targetRelationships = findRelationshipsForBelief(beliefId, agentId);
-        
-        Set<String> allBeliefs = beliefs.keySet().stream()
-                .filter(id -> beliefs.get(id).getAgentId().equals(agentId))
-                .collect(Collectors.toSet());
-        
-        for (String otherId : allBeliefs) {
-            if (!otherId.equals(beliefId)) {
-                List<BeliefRelationship> otherRelationships = findRelationshipsForBelief(otherId, agentId);
-                double similarity = calculateSimilarity(targetRelationships, otherRelationships);
-                
-                if (similarity >= similarityThreshold) {
-                    Map<String, Object> similarBelief = new HashMap<>();
-                    similarBelief.put("beliefId", otherId);
-                    similarBelief.put("similarity", similarity);
-                    similarBelief.put("belief", beliefs.get(otherId));
-                    similarBeliefs.add(similarBelief);
-                }
-            }
-        }
-        
-        return similarBeliefs.stream()
-                .sorted((a, b) -> Double.compare((Double) b.get("similarity"), (Double) a.get("similarity")))
-                .collect(Collectors.toList());
-    }
-    
-    private double calculateSimilarity(List<BeliefRelationship> relationships1, List<BeliefRelationship> relationships2) {
-        if (relationships1.isEmpty() && relationships2.isEmpty()) {
-            return 0.0;
-        }
-        
-        Set<String> types1 = relationships1.stream()
-                .map(rel -> rel.getRelationshipType().getCode())
-                .collect(Collectors.toSet());
-        
-        Set<String> types2 = relationships2.stream()
-                .map(rel -> rel.getRelationshipType().getCode())
-                .collect(Collectors.toSet());
-        
-        Set<String> intersection = new HashSet<>(types1);
-        intersection.retainAll(types2);
-        
-        Set<String> union = new HashSet<>(types1);
-        union.addAll(types2);
-        
-        return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
-    }
-    
-    @Override
-    public BeliefKnowledgeGraph getKnowledgeGraph(String agentId) {
-        Map<String, Belief> agentBeliefs = beliefs.entrySet().stream()
-                .filter(entry -> entry.getValue().getAgentId().equals(agentId))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        
-        List<BeliefRelationship> agentRelationships = relationships.values().stream()
-                .filter(rel -> rel.getAgentId().equals(agentId))
-                .collect(Collectors.toList());
-        
-        return new BeliefKnowledgeGraph(agentId, agentBeliefs.values(), agentRelationships);
-    }
-    
-    @Override
-    public BeliefKnowledgeGraph getActiveKnowledgeGraph(String agentId) {
-        Map<String, Belief> agentBeliefs = beliefs.entrySet().stream()
-                .filter(entry -> entry.getValue().getAgentId().equals(agentId))
-                .filter(entry -> entry.getValue().isActive())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        
-        List<BeliefRelationship> activeRelationships = relationships.values().stream()
-                .filter(rel -> rel.getAgentId().equals(agentId))
-                .filter(BeliefRelationship::isActive)
-                .filter(BeliefRelationship::isCurrentlyEffective)
-                .collect(Collectors.toList());
-        
-        return new BeliefKnowledgeGraph(agentId, agentBeliefs.values(), activeRelationships);
-    }
-    
-    @Override
-    public Map<String, Object> getKnowledgeGraphStatistics(String agentId) {
-        // Delegate to efficient query service for better performance
-        return getEfficientGraphStatistics(agentId);
-    }
-    
-    @Override
-    public List<String> validateKnowledgeGraph(String agentId) {
-        // Delegate to efficient query service for better performance
-        return performEfficientGraphValidation(agentId);
-    }
-    
-    @Override
-    public Map<String, Set<String>> findBeliefClusters(String agentId, double strengthThreshold) {
-        // Delegate to efficient query service for better performance
-        return queryService.findStronglyConnectedBeliefClusters(agentId, strengthThreshold);
-    }
     
     // ========================================
     // EFFICIENT GRAPH OPERATIONS
@@ -475,26 +387,6 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
         }
     }
     
-    @Override
-    public List<Map<String, Object>> findPotentialConflicts(String agentId) {
-        List<Map<String, Object>> conflicts = new ArrayList<>();
-        
-        List<BeliefRelationship> contradictoryRels = findRelationshipsByType(RelationshipType.CONTRADICTS, agentId);
-        
-        for (BeliefRelationship rel : contradictoryRels) {
-            if (rel.isCurrentlyEffective()) {
-                Map<String, Object> conflict = new HashMap<>();
-                conflict.put("sourceBeliefId", rel.getSourceBeliefId());
-                conflict.put("targetBeliefId", rel.getTargetBeliefId());
-                conflict.put("relationshipType", rel.getRelationshipType());
-                conflict.put("strength", rel.getStrength());
-                conflict.put("description", "Contradictory beliefs detected");
-                conflicts.add(conflict);
-            }
-        }
-        
-        return conflicts;
-    }
     
     @Override
     public List<BeliefRelationship> findShortestPath(String sourceBeliefId, String targetBeliefId, String agentId) {
@@ -536,16 +428,6 @@ public class InMemoryBeliefRelationshipService implements BeliefRelationshipServ
         return Collections.emptyList(); // No path found
     }
     
-    @Override
-    public List<Map<String, Object>> suggestRelationships(String agentId, int maxSuggestions) {
-        // Simple suggestion algorithm based on content similarity and existing patterns
-        List<Map<String, Object>> suggestions = new ArrayList<>();
-        
-        // This is a placeholder implementation - in a real system, this would use
-        // more sophisticated algorithms, possibly involving ML models
-        
-        return suggestions;
-    }
     
     @Override
     public List<BeliefRelationship> createRelationshipsBulk(List<BeliefRelationship> relationships, String agentId) {

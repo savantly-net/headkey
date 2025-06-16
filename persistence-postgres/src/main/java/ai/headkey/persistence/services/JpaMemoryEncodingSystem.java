@@ -6,6 +6,7 @@ import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategyFactory;

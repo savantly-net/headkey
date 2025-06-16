@@ -1,9 +1,9 @@
 package ai.headkey.memory.langchain4j;
 
 import ai.headkey.memory.dto.CategoryLabel;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 import ai.headkey.memory.langchain4j.dto.*;
 import ai.headkey.memory.langchain4j.services.ai.*;
-import ai.headkey.memory.spi.BeliefExtractionService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 

@@ -1,6 +1,6 @@
 package ai.headkey.persistence;
 
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
 
 import org.junit.jupiter.api.*;

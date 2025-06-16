@@ -3,9 +3,9 @@ package ai.headkey.persistence.examples;
 import ai.headkey.memory.dto.*;
 import ai.headkey.memory.factory.BeliefReinforcementConflictAnalyzerFactory;
 import ai.headkey.memory.implementations.SimplePatternBeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
 
 import com.zaxxer.hikari.HikariConfig;

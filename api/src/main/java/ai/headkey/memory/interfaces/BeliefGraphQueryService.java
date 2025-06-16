@@ -98,7 +98,7 @@ public interface BeliefGraphQueryService {
      * @param limit Maximum number of results (0 = no limit)
      * @return List of beliefs in the category
      */
-    List<Belief> getBeliefsByCategory(String agentId, String category, int limit);
+    List<Belief> getBeliefsInCategory(String agentId, String category, int limit);
     
     /**
      * Gets beliefs with confidence above threshold.
@@ -259,16 +259,7 @@ public interface BeliefGraphQueryService {
     List<String> getShortestPathIds(String sourceBeliefId, String targetBeliefId, 
                                    String agentId, int maxDepth);
     
-    /**
-     * Gets belief IDs in strongly connected components above strength threshold.
-     * 
-     * @param agentId The agent ID
-     * @param strengthThreshold Minimum relationship strength
-     * @param minClusterSize Minimum cluster size
-     * @return Map of cluster names to belief ID sets
-     */
-    Map<String, Set<String>> getBeliefClusterIds(String agentId, double strengthThreshold, int minClusterSize);
-    
+
     // ========================================
     // CONFLICT AND VALIDATION QUERIES
     // ========================================
@@ -484,16 +475,7 @@ public interface BeliefGraphQueryService {
      * @return Set of related belief IDs
      */
     Set<String> findRelatedBeliefIds(String beliefId, String agentId, int maxDepth);
-    
-    /**
-     * Finds strongly connected belief clusters using database-optimized algorithms.
-     * 
-     * @param agentId The agent ID
-     * @param strengthThreshold Minimum relationship strength
-     * @return Map of cluster ID to belief IDs in that cluster
-     */
-    Map<String, Set<String>> findStronglyConnectedBeliefClusters(String agentId, double strengthThreshold);
-    
+
     // ========================================
     // GRAPH SNAPSHOT CREATION
     // ========================================

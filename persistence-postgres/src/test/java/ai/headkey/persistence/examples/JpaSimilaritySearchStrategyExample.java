@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
@@ -30,7 +30,7 @@ public class JpaSimilaritySearchStrategyExample {
     private static String agentId = "demo-agent";
     
     // Mock embedding generator for demonstration
-    private static final AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator = 
+    private static final VectorEmbeddingGenerator embeddingGenerator = 
         text -> {
             // Simple demonstration embedding: hash-based vector
             double[] vector = new double[10];

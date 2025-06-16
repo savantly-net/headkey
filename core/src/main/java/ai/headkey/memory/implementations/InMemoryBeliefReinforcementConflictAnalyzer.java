@@ -1,8 +1,8 @@
 package ai.headkey.memory.implementations;
 
 import ai.headkey.memory.abstracts.AbstractBeliefReinforcementConflictAnalyzer;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 
 import java.util.concurrent.atomic.AtomicLong;
 

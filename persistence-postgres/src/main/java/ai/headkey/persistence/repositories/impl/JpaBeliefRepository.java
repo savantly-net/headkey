@@ -1,6 +1,6 @@
 package ai.headkey.persistence.repositories.impl;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.entities.BeliefEntity;
 import ai.headkey.persistence.repositories.BeliefRepository;
 import jakarta.persistence.EntityManager;

@@ -209,80 +209,7 @@ public interface BeliefRelationshipService {
      */
     Set<String> findRelatedBeliefs(String beliefId, String agentId, int maxDepth);
     
-    /**
-     * Finds beliefs that are semantically similar based on relationship patterns.
-     * 
-     * @param beliefId The belief ID
-     * @param agentId The agent ID
-     * @param similarityThreshold Minimum similarity threshold
-     * @return List of similar beliefs with similarity scores
-     */
-    List<Map<String, Object>> findSimilarBeliefs(String beliefId, String agentId, double similarityThreshold);
-    
-    /**
-     * Gets the complete knowledge graph for an agent.
-     * 
-     * @deprecated For large graphs, use createSnapshotGraph() or BeliefGraphQueryService methods instead.
-     * This method loads the complete graph into memory which can be inefficient.
-     * 
-     * @param agentId The agent ID
-     * @return The belief knowledge graph
-     */
-    @Deprecated
-    BeliefKnowledgeGraph getKnowledgeGraph(String agentId);
 
-    /**
-     * Gets a filtered knowledge graph containing only active relationships.
-     * 
-     * @deprecated For large graphs, use createSnapshotGraph(agentId, false) or BeliefGraphQueryService methods instead.
-     * This method loads the complete active graph into memory which can be inefficient.
-     * 
-     * @param agentId The agent ID
-     * @return The filtered knowledge graph
-     */
-    @Deprecated
-    BeliefKnowledgeGraph getActiveKnowledgeGraph(String agentId);
-    
-    /**
-     * Gets knowledge graph statistics for an agent.
-     * 
-     * @deprecated Use BeliefGraphQueryService.getComprehensiveGraphStatistics() for efficient database-level statistics.
-     * This method loads the complete graph into memory which is inefficient for large datasets.
-     * 
-     * @param agentId The agent ID
-     * @return Map containing graph statistics
-     */
-    @Deprecated
-    Map<String, Object> getKnowledgeGraphStatistics(String agentId);
-    
-    /**
-     * Validates the knowledge graph structure for consistency.
-     * 
-     * @deprecated Use BeliefGraphQueryService.validateGraphStructure() for efficient database-level validation.
-     * This method loads the complete graph into memory which is inefficient for large datasets.
-     * 
-     * @param agentId The agent ID
-     * @return List of validation issues
-     */
-    @Deprecated
-    List<String> validateKnowledgeGraph(String agentId);
-    
-    /**
-     * Finds strongly connected belief clusters.
-     * 
-     * @param agentId The agent ID
-     * @param strengthThreshold Minimum relationship strength threshold
-     * @return Map of cluster names to belief sets
-     */
-    Map<String, Set<String>> findBeliefClusters(String agentId, double strengthThreshold);
-    
-    /**
-     * Finds potential conflicts between beliefs based on contradictory relationships.
-     * 
-     * @param agentId The agent ID
-     * @return List of potential belief conflicts
-     */
-    List<Map<String, Object>> findPotentialConflicts(String agentId);
 
     // ========================================
     // EFFICIENT GRAPH OPERATIONS
@@ -306,6 +233,8 @@ public interface BeliefRelationshipService {
      */
     List<String> performEfficientGraphValidation(String agentId);
 
+
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Creates a lightweight snapshot graph for small datasets.
      * Recommended for graphs with < 1000 beliefs.
@@ -316,6 +245,7 @@ public interface BeliefRelationshipService {
      */
     BeliefKnowledgeGraph createSnapshotGraph(String agentId, boolean includeInactive);
 
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Creates a filtered snapshot graph based on specific criteria.
      * 
@@ -330,6 +260,7 @@ public interface BeliefRelationshipService {
                                               Set<RelationshipType> relationshipTypes,
                                               int maxBeliefs);
 
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Creates a graph snapshot optimized for export operations.
      * 
@@ -339,6 +270,7 @@ public interface BeliefRelationshipService {
      */
     BeliefKnowledgeGraph createExportGraph(String agentId, String format);
 
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Finds the shortest path between two beliefs in the knowledge graph.
      * 
@@ -350,15 +282,6 @@ public interface BeliefRelationshipService {
     List<BeliefRelationship> findShortestPath(String sourceBeliefId, String targetBeliefId, String agentId);
     
     /**
-     * Suggests new relationships based on existing patterns and belief content.
-     * 
-     * @param agentId The agent ID
-     * @param maxSuggestions Maximum number of suggestions to return
-     * @return List of suggested relationships
-     */
-    List<Map<String, Object>> suggestRelationships(String agentId, int maxSuggestions);
-    
-    /**
      * Bulk creates multiple relationships efficiently.
      * 
      * @param relationships List of relationships to create
@@ -367,6 +290,7 @@ public interface BeliefRelationshipService {
      */
     List<BeliefRelationship> createRelationshipsBulk(List<BeliefRelationship> relationships, String agentId);
     
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Exports the knowledge graph in a specific format.
      * 
@@ -386,6 +310,7 @@ public interface BeliefRelationshipService {
      */
     int importRelationships(String data, String format, String agentId);
     
+    // TODO: move this to BeliefKnowledgeGraphService
     /**
      * Performs cleanup operations on the knowledge graph.
      * This includes removing orphaned relationships, inactive relationships older than a threshold, etc.

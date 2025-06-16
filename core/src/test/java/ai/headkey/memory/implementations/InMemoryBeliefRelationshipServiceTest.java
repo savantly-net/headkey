@@ -1,17 +1,27 @@
 package ai.headkey.memory.implementations;
 
-import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.dto.BeliefRelationship;
-import ai.headkey.memory.dto.BeliefKnowledgeGraph;
-import ai.headkey.memory.enums.RelationshipType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import ai.headkey.memory.dto.Belief;
+import ai.headkey.memory.dto.BeliefKnowledgeGraph;
+import ai.headkey.memory.dto.BeliefRelationship;
+import ai.headkey.memory.enums.RelationshipType;
 
 /**
  * Unit tests for InMemoryBeliefRelationshipService.
@@ -382,138 +392,7 @@ class InMemoryBeliefRelationshipServiceTest {
         assertTrue(related.contains(BELIEF_2_ID));   // Direct connection
         // Note: Due to implementation differences, we only test for direct connections reliably
     }
-    
-    @Test
-    @DisplayName("Should calculate similarity between beliefs")
-    void testFindSimilarBeliefs() {
-        // Given - Create relationships that make beliefs similar
-        service.createRelationship(BELIEF_1_ID, BELIEF_3_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        service.createRelationship(BELIEF_2_ID, BELIEF_3_ID, RelationshipType.SUPPORTS, 0.7, AGENT_ID);
-        service.createRelationship(BELIEF_1_ID, BELIEF_4_ID, RelationshipType.RELATES_TO, 0.6, AGENT_ID);
-        service.createRelationship(BELIEF_2_ID, BELIEF_4_ID, RelationshipType.RELATES_TO, 0.5, AGENT_ID);
-        
-        // When
-        List<Map<String, Object>> similar = service.findSimilarBeliefs(BELIEF_1_ID, AGENT_ID, 0.1);
-        
-        // Then
-        assertFalse(similar.isEmpty());
-        // BELIEF_2_ID should be similar to BELIEF_1_ID due to shared relationship types
-        assertTrue(similar.stream().anyMatch(s -> BELIEF_2_ID.equals(s.get("beliefId"))));
-    }
-    
-    @Test
-    @DisplayName("Should get complete knowledge graph")
-    void testGetKnowledgeGraph() {
-        // Given
-        service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        service.createRelationship(BELIEF_2_ID, BELIEF_3_ID, RelationshipType.RELATES_TO, 0.7, AGENT_ID);
-        
-        // When
-        BeliefKnowledgeGraph graph = service.getKnowledgeGraph(AGENT_ID);
-        
-        // Then
-        assertNotNull(graph);
-        assertEquals(AGENT_ID, graph.getAgentId());
-        assertEquals(4, graph.getBeliefs().size());
-        assertEquals(2, graph.getRelationships().size());
-    }
-    
-    @Test
-    @DisplayName("Should get active knowledge graph only")
-    void testGetActiveKnowledgeGraph() {
-        // Given
-        BeliefRelationship activeRel = service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        BeliefRelationship inactiveRel = service.createRelationship(BELIEF_2_ID, BELIEF_3_ID, RelationshipType.RELATES_TO, 0.7, AGENT_ID);
-        service.deactivateRelationship(inactiveRel.getId(), AGENT_ID);
-        
-        // When
-        BeliefKnowledgeGraph graph = service.getActiveKnowledgeGraph(AGENT_ID);
-        
-        // Then
-        assertNotNull(graph);
-        assertEquals(1, graph.getRelationships().size());
-        assertTrue(graph.getRelationships().values().stream().allMatch(BeliefRelationship::isActive));
-    }
-    
-    @Test
-    @DisplayName("Should get knowledge graph statistics")
-    void testGetKnowledgeGraphStatistics() {
-        // Given
-        service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        service.createRelationship(BELIEF_2_ID, BELIEF_3_ID, RelationshipType.RELATES_TO, 0.7, AGENT_ID);
-        service.deprecateBeliefWith(BELIEF_3_ID, BELIEF_4_ID, "Update", AGENT_ID);
-        
-        // When
-        Map<String, Object> stats = service.getKnowledgeGraphStatistics(AGENT_ID);
-        
-        // Then
-        assertNotNull(stats);
-        
-        // Handle both old and new statistics formats
-        Object totalBeliefs = stats.get("totalBeliefs");
-        if (totalBeliefs instanceof Long) {
-            assertEquals(4L, totalBeliefs);
-        } else {
-            assertEquals(4, totalBeliefs);
-        }
-        
-        Object totalRelationships = stats.get("totalRelationships");
-        if (totalRelationships instanceof Long) {
-            assertEquals(3L, totalRelationships);
-        } else {
-            assertEquals(3, totalRelationships);
-        }
-        
-        assertTrue(stats.containsKey("relationshipTypeDistribution"));
-        assertTrue(stats.containsKey("averageRelationshipStrength"));
-    }
-    
-    @Test
-    @DisplayName("Should validate knowledge graph structure")
-    void testValidateKnowledgeGraph() {
-        // Given - Create valid relationships
-        service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        
-        // When
-        List<String> issues = service.validateKnowledgeGraph(AGENT_ID);
-        
-        // Then
-        assertTrue(issues.isEmpty()); // Should have no validation issues
-    }
-    
-    @Test
-    @DisplayName("Should find belief clusters based on strength")
-    void testFindBeliefClusters() {
-        // Given - Create high-strength relationships
-        service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.9, AGENT_ID);
-        service.createRelationship(BELIEF_2_ID, BELIEF_1_ID, RelationshipType.RELATES_TO, 0.85, AGENT_ID);
-        service.createRelationship(BELIEF_3_ID, BELIEF_4_ID, RelationshipType.SUPPORTS, 0.95, AGENT_ID);
-        
-        // When
-        Map<String, Set<String>> clusters = service.findBeliefClusters(AGENT_ID, 0.8);
-        
-        // Then
-        assertFalse(clusters.isEmpty());
-        // Should find clusters of strongly connected beliefs
-    }
-    
-    @Test
-    @DisplayName("Should find potential conflicts")
-    void testFindPotentialConflicts() {
-        // Given - Create contradictory relationships
-        service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.CONTRADICTS, 0.8, AGENT_ID);
-        service.createRelationship(BELIEF_3_ID, BELIEF_4_ID, RelationshipType.SUPPORTS, 0.7, AGENT_ID);
-        
-        // When
-        List<Map<String, Object>> conflicts = service.findPotentialConflicts(AGENT_ID);
-        
-        // Then
-        assertEquals(1, conflicts.size());
-        Map<String, Object> conflict = conflicts.get(0);
-        assertEquals(BELIEF_1_ID, conflict.get("sourceBeliefId"));
-        assertEquals(BELIEF_2_ID, conflict.get("targetBeliefId"));
-        assertEquals(RelationshipType.CONTRADICTS, conflict.get("relationshipType"));
-    }
+
     
     // ========================================
     // EFFICIENT OPERATIONS TESTS
@@ -667,37 +546,7 @@ class InMemoryBeliefRelationshipServiceTest {
         assertTrue(snapshot.getBeliefs().isEmpty());
         assertTrue(snapshot.getRelationships().isEmpty());
     }
-    
-    @Test
-    @DisplayName("Should compare performance between old and new methods")
-    void testPerformanceComparison() {
-        // Given - Create a moderate number of relationships for performance testing
-        for (int i = 0; i < 10; i++) {
-            service.createRelationship(BELIEF_1_ID, BELIEF_2_ID, RelationshipType.SUPPORTS, 0.8, AGENT_ID);
-        }
-        
-        // Test old method performance
-        long startTime = System.currentTimeMillis();
-        Map<String, Object> oldStats = service.getKnowledgeGraphStatistics(AGENT_ID);
-        long oldMethodTime = System.currentTimeMillis() - startTime;
-        
-        // Test new method performance
-        startTime = System.currentTimeMillis();
-        Map<String, Object> newStats = service.getEfficientGraphStatistics(AGENT_ID);
-        long newMethodTime = System.currentTimeMillis() - startTime;
-        
-        // Both should return valid results
-        assertNotNull(oldStats);
-        assertNotNull(newStats);
-        
-        // New method should have similar or better performance
-        // (Note: In a small test dataset, difference might be minimal)
-        assertTrue(newMethodTime <= oldMethodTime + 50); // Allow 50ms tolerance
-        
-        System.out.println("Performance comparison:");
-        System.out.println("Old method: " + oldMethodTime + "ms");
-        System.out.println("New method: " + newMethodTime + "ms");
-    }
+
     
     @Test
     @DisplayName("Should find shortest path between beliefs")

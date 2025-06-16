@@ -23,6 +23,7 @@ dependencies {
     implementation project(':api')
     implementation project(':core')
     implementation project(':persistence-postgres')
+    implementation project(':persistence-elastic')
     implementation project(':langchain4j')
 
     testImplementation 'io.quarkus:quarkus-junit5'
@@ -31,9 +32,26 @@ dependencies {
     testImplementation 'org.mockito:mockito-core'
 }
 
+sourceSets {
+    integrationTest {
+        java.srcDir 'src/int-test/java'
+        resources.srcDir 'src/int-test/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    }
+}
+
+task integrationTest(type: Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.main.runtimeClasspath + sourceSets.integrationTest.runtimeClasspath
+}
+
 test {
     systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
 }
+
 compileJava {
     options.encoding = 'UTF-8'
     options.compilerArgs << '-parameters'
@@ -42,3 +60,4 @@ compileJava {
 compileTestJava {
     options.encoding = 'UTF-8'
 }
+

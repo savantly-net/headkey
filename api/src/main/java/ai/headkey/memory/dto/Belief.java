@@ -384,4 +384,96 @@ public class Belief {
                 ", tags=" + tags +
                 '}';
     }
+
+    static public class Builder {
+
+        private Belief belief;
+
+        /**
+         * Default constructor for the Belief Builder.
+         * Initializes a new Belief instance with default values.
+         */
+        public Builder() {
+            belief = new Belief();
+        }
+
+        /**
+         * Constructor for the Belief Builder with required fields.
+         * 
+         * @param id The belief identifier
+         * @param agentId The agent identifier
+         * @param statement The belief statement
+         */
+        public Builder(String id, String agentId, String statement) {
+            belief = new Belief(id, agentId, statement);
+        }
+
+        public Builder id(String id) {
+            belief.setId(id);
+            return this;
+        }
+        public Builder agentId(String agentId) {
+            belief.setAgentId(agentId);
+            return this;
+        }
+        public Builder statement(String statement) {
+            belief.setStatement(statement);
+            return this;
+        }
+
+        public Builder confidence(double confidence) {
+            belief.setConfidence(confidence);
+            return this;
+        }
+
+        public Builder category(String category) {
+            belief.setCategory(category);
+            return this;
+        }
+
+        public Builder evidenceMemoryIds(Set<String> evidenceMemoryIds) {
+            belief.setEvidenceMemoryIds(evidenceMemoryIds);
+            return this;
+        }
+        public Builder tags(Set<String> tags) {
+            belief.setTags(tags);
+            return this;
+        }
+
+        public Builder createdAt(Instant now) {
+            belief.setCreatedAt(now);
+            return this;
+        }
+        public Builder lastUpdated(Instant now) {
+            belief.setLastUpdated(now);
+            return this;
+        }
+        public Builder reinforcementCount(int count) {
+            belief.setReinforcementCount(count);
+            return this;
+        }
+        public Builder active(boolean active) {
+            belief.setActive(active);
+            return this;
+        }
+        public Builder evidenceMemoryIds(String memoryId) {
+            belief.addEvidence(memoryId);
+            return this;
+        }
+        public Builder addEvidence(String memoryId) {
+            belief.addEvidence(memoryId);
+            return this;
+        }
+        public Builder addTag(String tag) {
+            belief.addTag(tag);
+            return this;
+        }
+
+        public Belief build() {
+            if (belief.getConfidence() < 0.0 || belief.getConfidence() > 1.0) {
+                throw new IllegalArgumentException("Confidence must be between 0.0 and 1.0");
+            }
+            return belief;
+        }
+    }
 }

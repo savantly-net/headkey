@@ -211,7 +211,7 @@ public class InMemoryBeliefGraphQueryService implements BeliefGraphQueryService 
     }
     
     @Override
-    public List<Belief> getBeliefsByCategory(String agentId, String category, int limit) {
+    public List<Belief> getBeliefsInCategory(String agentId, String category, int limit) {
         Stream<Belief> stream = streamBeliefs(agentId, false, 0)
                 .filter(belief -> Objects.equals(belief.getCategory(), category));
         
@@ -463,27 +463,6 @@ public class InMemoryBeliefGraphQueryService implements BeliefGraphQueryService 
         return Collections.emptyList(); // No path found
     }
     
-    @Override
-    public Map<String, Set<String>> getBeliefClusterIds(String agentId, double strengthThreshold, int minClusterSize) {
-        Map<String, Set<String>> clusters = new HashMap<>();
-        Set<String> processed = new HashSet<>();
-        int clusterCount = 0;
-        
-        for (String beliefId : agentBeliefIndex.getOrDefault(agentId, Collections.emptySet())) {
-            if (!processed.contains(beliefId)) {
-                Set<String> cluster = new HashSet<>();
-                findStronglyConnectedRecursive(beliefId, agentId, cluster, processed, strengthThreshold);
-                
-                if (cluster.size() >= minClusterSize) {
-                    clusters.put("cluster_" + clusterCount++, cluster);
-                }
-            }
-        }
-        
-        return clusters;
-    }
-    
-
     
     // ========================================
     // CONFLICT AND VALIDATION QUERIES
@@ -945,56 +924,6 @@ public class InMemoryBeliefGraphQueryService implements BeliefGraphQueryService 
                 .forEach(rel -> findRelatedBeliefIdsRecursive(rel.getSourceBeliefId(), agentId, related, visited, currentDepth + 1, maxDepth));
     }
 
-    @Override
-    public Map<String, Set<String>> findStronglyConnectedBeliefClusters(String agentId, double strengthThreshold) {
-        Map<String, Set<String>> clusters = new HashMap<>();
-        Set<String> agentBeliefIds = agentBeliefIndex.getOrDefault(agentId, Collections.emptySet());
-        Set<String> visited = new HashSet<>();
-        int clusterId = 0;
-        
-        for (String beliefId : agentBeliefIds) {
-            if (!visited.contains(beliefId)) {
-                Set<String> cluster = new HashSet<>();
-                findStronglyConnectedRecursive(beliefId, agentId, cluster, visited, strengthThreshold);
-                
-                if (cluster.size() > 1) { // Only include clusters with multiple beliefs
-                    clusters.put("cluster-" + clusterId++, cluster);
-                }
-            }
-        }
-        
-        return clusters;
-    }
-
-    private void findStronglyConnectedRecursive(String beliefId, String agentId, Set<String> cluster, 
-                                               Set<String> visited, double strengthThreshold) {
-        if (visited.contains(beliefId)) {
-            return;
-        }
-        
-        visited.add(beliefId);
-        cluster.add(beliefId);
-        
-        // Follow strong outgoing relationships
-        Set<String> outgoingRelIds = outgoingRelationshipIndex.getOrDefault(beliefId, Collections.emptySet());
-        outgoingRelIds.stream()
-                .map(relationships::get)
-                .filter(Objects::nonNull)
-                .filter(rel -> rel.getAgentId().equals(agentId))
-                .filter(BeliefRelationship::isActive)
-                .filter(rel -> rel.getStrength() >= strengthThreshold)
-                .forEach(rel -> findStronglyConnectedRecursive(rel.getTargetBeliefId(), agentId, cluster, visited, strengthThreshold));
-        
-        // Follow strong incoming relationships
-        Set<String> incomingRelIds = incomingRelationshipIndex.getOrDefault(beliefId, Collections.emptySet());
-        incomingRelIds.stream()
-                .map(relationships::get)
-                .filter(Objects::nonNull)
-                .filter(rel -> rel.getAgentId().equals(agentId))
-                .filter(BeliefRelationship::isActive)
-                .filter(rel -> rel.getStrength() >= strengthThreshold)
-                .forEach(rel -> findStronglyConnectedRecursive(rel.getSourceBeliefId(), agentId, cluster, visited, strengthThreshold));
-    }
 
     // ========================================
     // GRAPH SNAPSHOT CREATION

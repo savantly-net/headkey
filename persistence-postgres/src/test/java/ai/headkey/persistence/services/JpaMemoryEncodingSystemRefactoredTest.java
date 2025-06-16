@@ -16,10 +16,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.TextBasedJpaSimilaritySearchStrategy;
 import jakarta.persistence.EntityManagerFactory;
@@ -36,7 +36,7 @@ class JpaMemoryEncodingSystemRefactoredTest {
     private static final String AGENT_ID= "test-agent-id";
     
     // Mock embedding generator for testing
-    private final AbstractMemoryEncodingSystem.VectorEmbeddingGenerator mockEmbeddingGenerator = 
+    private final VectorEmbeddingGenerator mockEmbeddingGenerator = 
         text -> {
             // Simple mock: convert text to vector based on character codes
             double[] vector = new double[5];
@@ -136,11 +136,13 @@ class JpaMemoryEncodingSystemRefactoredTest {
     }
     
     @Test
-    void testMemorySystemWithCustomDefaultStrategy() {
+    void testMemorySystemWithCustomDefaultStrategy() throws Exception {
+        var defaultStrategy = new DefaultJpaSimilaritySearchStrategy();
+        defaultStrategy.initialize(entityManagerFactory.createEntityManager());
         // Create memory system with specific default strategy
         JpaMemoryEncodingSystem customSystem = new JpaMemoryEncodingSystem(
             entityManagerFactory, mockEmbeddingGenerator, 100, true, 1000, 0.0,
-            new DefaultJpaSimilaritySearchStrategy());
+            defaultStrategy);
         
         assertTrue(customSystem.getSimilaritySearchStrategy() instanceof DefaultJpaSimilaritySearchStrategy);
         assertFalse(customSystem.getSimilaritySearchStrategy().supportsVectorSearch());

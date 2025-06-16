@@ -1,19 +1,26 @@
 package ai.headkey.persistence.services;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.dto.BeliefRelationship;
 import ai.headkey.memory.dto.BeliefKnowledgeGraph;
+import ai.headkey.memory.dto.BeliefRelationship;
 import ai.headkey.memory.enums.RelationshipType;
 import ai.headkey.memory.interfaces.BeliefRelationshipService;
 import ai.headkey.persistence.entities.BeliefRelationshipEntity;
-import ai.headkey.persistence.mappers.BeliefRelationshipMapper;
 import ai.headkey.persistence.mappers.BeliefMapper;
+import ai.headkey.persistence.mappers.BeliefRelationshipMapper;
 import ai.headkey.persistence.repositories.BeliefRelationshipRepository;
 import ai.headkey.persistence.repositories.BeliefRepository;
-
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * JPA implementation of BeliefRelationshipService using PostgreSQL database.
@@ -335,97 +342,6 @@ public class JpaBeliefRelationshipService implements BeliefRelationshipService {
         return new HashSet<>(relationshipRepository.findConnectedBeliefs(beliefId, agentId, maxDepth, false));
     }
 
-    @Override
-    public List<Map<String, Object>> findSimilarBeliefs(String beliefId, String agentId, double similarityThreshold) {
-        totalQueryOperations++;
-        // Simplified implementation - find beliefs with similar relationship patterns
-        List<BeliefRelationshipEntity> beliefRelationships = relationshipRepository.findByBelief(beliefId, agentId, false);
-        Set<RelationshipType> relationshipTypes = beliefRelationships.stream()
-                .map(BeliefRelationshipEntity::getRelationshipType)
-                .collect(Collectors.toSet());
-
-        List<Map<String, Object>> similar = new ArrayList<>();
-        
-        for (RelationshipType type : relationshipTypes) {
-            List<BeliefRelationshipEntity> sameTypeRelationships = relationshipRepository.findByType(type, agentId, false);
-            for (BeliefRelationshipEntity rel : sameTypeRelationships) {
-                String otherBeliefId = rel.getSourceBeliefId().equals(beliefId) ? rel.getTargetBeliefId() : rel.getSourceBeliefId();
-                if (!otherBeliefId.equals(beliefId)) {
-                    Map<String, Object> similarBelief = new HashMap<>();
-                    similarBelief.put("beliefId", otherBeliefId);
-                    similarBelief.put("similarity", rel.getStrength());
-                    similarBelief.put("relationshipType", type);
-                    similar.add(similarBelief);
-                }
-            }
-        }
-
-        return similar.stream()
-                .filter(belief -> (Double) belief.get("similarity") >= similarityThreshold)
-                .sorted((a, b) -> Double.compare((Double) b.get("similarity"), (Double) a.get("similarity")))
-                .collect(Collectors.toList());
-    }
-
-    // ========== Deprecated Graph Methods ==========
-
-    @Override
-    @Deprecated
-    public BeliefKnowledgeGraph getKnowledgeGraph(String agentId) {
-        return createSnapshotGraph(agentId, false);
-    }
-
-    @Override
-    @Deprecated
-    public BeliefKnowledgeGraph getActiveKnowledgeGraph(String agentId) {
-        return createSnapshotGraph(agentId, false);
-    }
-
-    @Override
-    @Deprecated
-    public Map<String, Object> getKnowledgeGraphStatistics(String agentId) {
-        return getEfficientGraphStatistics(agentId);
-    }
-
-    @Override
-    @Deprecated
-    public List<String> validateKnowledgeGraph(String agentId) {
-        return performEfficientGraphValidation(agentId);
-    }
-
-    // ========== Advanced Graph Operations ==========
-
-    @Override
-    public Map<String, Set<String>> findBeliefClusters(String agentId, double strengthThreshold) {
-        totalQueryOperations++;
-        List<List<String>> clusters = relationshipRepository.findStronglyConnectedClusters(agentId, strengthThreshold);
-        Map<String, Set<String>> clusterMap = new HashMap<>();
-        
-        for (int i = 0; i < clusters.size(); i++) {
-            clusterMap.put("cluster_" + i, new HashSet<>(clusters.get(i)));
-        }
-        
-        return clusterMap;
-    }
-
-    @Override
-    public List<Map<String, Object>> findPotentialConflicts(String agentId) {
-        totalQueryOperations++;
-        List<Map<String, Object>> conflicts = new ArrayList<>();
-        
-        // Find contradictory relationships
-        List<BeliefRelationshipEntity> contradictoryRels = relationshipRepository.findByType(RelationshipType.CONTRADICTS, agentId, false);
-        
-        for (BeliefRelationshipEntity rel : contradictoryRels) {
-            Map<String, Object> conflict = new HashMap<>();
-            conflict.put("type", "contradiction");
-            conflict.put("sourceBeliefId", rel.getSourceBeliefId());
-            conflict.put("targetBeliefId", rel.getTargetBeliefId());
-            conflict.put("strength", rel.getStrength());
-            conflicts.add(conflict);
-        }
-        
-        return conflicts;
-    }
 
     // ========== Efficient Graph Operations ==========
 
@@ -553,26 +469,6 @@ public class JpaBeliefRelationshipService implements BeliefRelationshipService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public List<Map<String, Object>> suggestRelationships(String agentId, int maxSuggestions) {
-        totalQueryOperations++;
-        // Simplified implementation - suggest based on common patterns
-        List<Map<String, Object>> suggestions = new ArrayList<>();
-        
-        List<Object[]> typeDistribution = relationshipRepository.getRelationshipTypeDistribution(agentId, false);
-        for (Object[] typeCount : typeDistribution) {
-            if (suggestions.size() >= maxSuggestions) break;
-            
-            RelationshipType type = (RelationshipType) typeCount[0];
-            Map<String, Object> suggestion = new HashMap<>();
-            suggestion.put("suggestionType", "common_relationship_type");
-            suggestion.put("relationshipType", type);
-            suggestion.put("frequency", typeCount[1]);
-            suggestions.add(suggestion);
-        }
-        
-        return suggestions;
-    }
 
     @Override
     public List<BeliefRelationship> createRelationshipsBulk(List<BeliefRelationship> relationships, String agentId) {

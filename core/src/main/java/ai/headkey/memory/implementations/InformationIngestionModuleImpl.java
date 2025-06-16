@@ -441,19 +441,23 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
         try {
             // Check that all required components are available and healthy
             if (categorizationEngine == null || !categorizationEngine.isHealthy()) {
+                LOG.warning("Categorization engine is not healthy");
                 return false;
             }
             
             if (encodingSystem == null || !encodingSystem.isHealthy()) {
+                LOG.warning("Memory encoding system is not healthy");
                 return false;
             }
             
             if (beliefAnalyzer == null || !beliefAnalyzer.isHealthy()) {
+                LOG.warning("Belief reinforcement conflict analyzer is not healthy");
                 return false;
             }
             
             // Check configuration integrity
             if (configuration == null || configuration.isEmpty()) {
+                LOG.warning("Configuration is null or empty");
                 return false;
             }
             
@@ -465,6 +469,7 @@ public class InformationIngestionModuleImpl implements InformationIngestionModul
             
             // Consider unhealthy if using more than 95% of allocated memory
             if (memoryUsage > 0.95) {
+                LOG.warning("Memory usage is too high: " + (memoryUsage * 100) + "%");
                 return false;
             }
             

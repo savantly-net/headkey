@@ -16,6 +16,7 @@ import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
 import ai.headkey.memory.interfaces.MemoryEncodingSystem;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 
 /**
  * Abstract base class for MemoryEncodingSystem implementations.
@@ -47,13 +48,6 @@ public abstract class AbstractMemoryEncodingSystem implements MemoryEncodingSyst
     protected VectorEmbeddingGenerator embeddingGenerator;
     protected SimilarityMetric similarityMetric = SimilarityMetric.COSINE;
     
-    /**
-     * Functional interface for generating vector embeddings from text content.
-     */
-    @FunctionalInterface
-    public interface VectorEmbeddingGenerator {
-        double[] generateEmbedding(String content) throws Exception;
-    }
     
     /**
      * Enum for different similarity metrics.

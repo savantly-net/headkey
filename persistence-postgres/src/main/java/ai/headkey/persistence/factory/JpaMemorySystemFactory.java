@@ -7,6 +7,7 @@ import java.util.Properties;
 import org.jboss.logging.Logger;
 
 import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import ai.headkey.persistence.strategies.jpa.DefaultJpaSimilaritySearchStrategy;
 import ai.headkey.persistence.strategies.jpa.JpaSimilaritySearchStrategy;
@@ -50,7 +51,7 @@ public class JpaMemorySystemFactory {
      * @return JpaMemoryEncodingSystem with optimal strategy for the database
      */
     public static JpaMemoryEncodingSystem createSystem(EntityManagerFactory entityManagerFactory,
-                                                      AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+                                                      VectorEmbeddingGenerator embeddingGenerator) {
         log.info("Creating JPA memory system with automatic strategy detection and embedding generator for EntityManagerFactory: " + entityManagerFactory);
         return new JpaMemoryEncodingSystem(entityManagerFactory, embeddingGenerator);
     }
@@ -65,7 +66,7 @@ public class JpaMemorySystemFactory {
      */
     public static JpaMemoryEncodingSystem createSystemWithStrategy(
             EntityManagerFactory entityManagerFactory,
-            AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator,
+            VectorEmbeddingGenerator embeddingGenerator,
             JpaSimilaritySearchStrategy similarityStrategy) {
         log.info("Creating JPA memory system with custom similarity search strategy for EntityManagerFactory: " + entityManagerFactory);
         return new JpaMemoryEncodingSystem(entityManagerFactory, embeddingGenerator, 
@@ -80,7 +81,7 @@ public class JpaMemorySystemFactory {
      * @return JpaMemoryEncodingSystem optimized for PostgreSQL
      */
     public static JpaMemoryEncodingSystem createPostgreSQLSystem(String persistenceUnitName,
-                                                                AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+                                                                VectorEmbeddingGenerator embeddingGenerator) {
         log.info("Creating JPA memory system optimized for PostgreSQL with persistence unit: " + persistenceUnitName);
         EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName);
         PostgresJpaSimilaritySearchStrategy strategy = new PostgresJpaSimilaritySearchStrategy();
@@ -99,7 +100,7 @@ public class JpaMemorySystemFactory {
      */
     public static JpaMemoryEncodingSystem createPostgreSQLSystem(String persistenceUnitName,
                                                                 Properties properties,
-                                                                AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator,
+                                                                VectorEmbeddingGenerator embeddingGenerator,
                                                                 int maxSimilarityResults,
                                                                 double similarityThreshold) {
         log.info("Creating JPA memory system optimized for PostgreSQL with custom configuration for persistence unit: " + persistenceUnitName);
@@ -122,7 +123,7 @@ public class JpaMemorySystemFactory {
      * @return JpaMemoryEncodingSystem optimized for H2
      */
     public static JpaMemoryEncodingSystem createH2System(String persistenceUnitName,
-                                                         AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+                                                         VectorEmbeddingGenerator embeddingGenerator) {
         log.info("Creating JPA memory system optimized for H2 with persistence unit: " + persistenceUnitName);
         EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName);
         TextBasedJpaSimilaritySearchStrategy strategy = new TextBasedJpaSimilaritySearchStrategy();
@@ -135,7 +136,7 @@ public class JpaMemorySystemFactory {
      * @param embeddingGenerator Function to generate vector embeddings
      * @return JpaMemoryEncodingSystem configured for testing
      */
-    public static JpaMemoryEncodingSystem createTestSystem(AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+    public static JpaMemoryEncodingSystem createTestSystem(VectorEmbeddingGenerator embeddingGenerator) {
         log.info("Creating JPA memory system for testing with in-memory H2 database");
         Map<String, Object> properties = new HashMap<>();
         properties.put("jakarta.persistence.jdbc.driver", "org.h2.Driver");
@@ -157,7 +158,7 @@ public class JpaMemorySystemFactory {
     public static class Builder {
         private String persistenceUnitName;
         private Properties properties = new Properties();
-        private AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator;
+        private VectorEmbeddingGenerator embeddingGenerator;
         private JpaSimilaritySearchStrategy similarityStrategy;
         private int batchSize = 100;
         private boolean enableSecondLevelCache = true;
@@ -185,7 +186,7 @@ public class JpaMemorySystemFactory {
             return this;
         }
         
-        public Builder embeddingGenerator(AbstractMemoryEncodingSystem.VectorEmbeddingGenerator embeddingGenerator) {
+        public Builder embeddingGenerator(VectorEmbeddingGenerator embeddingGenerator) {
             this.embeddingGenerator = embeddingGenerator;
             return this;
         }

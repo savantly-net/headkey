@@ -1,8 +1,12 @@
 package ai.headkey.rest.service;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
-import dev.langchain4j.model.embedding.EmbeddingModel;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,13 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
 /**
  * Test class for LangChain4JVectorEmbeddingGenerator.
- * 
+ *
  * This test class follows TDD principles and tests the integration
  * between the HeadKey VectorEmbeddingGenerator interface and the
  * LangChain4J EmbeddingModel.
@@ -43,10 +43,12 @@ class LangChain4JVectorEmbeddingGeneratorTest {
     void shouldGenerateEmbeddingFromText() throws Exception {
         // Given
         String inputText = "This is a test sentence for embedding generation.";
-        float[] mockVector = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
+        float[] mockVector = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
         Embedding mockEmbedding = Embedding.from(mockVector);
-        
-        when(embeddingModel.embed(inputText)).thenReturn(Response.from(mockEmbedding));
+
+        when(embeddingModel.embed(inputText)).thenReturn(
+            Response.from(mockEmbedding)
+        );
 
         // When
         double[] result = generator.generateEmbedding(inputText);
@@ -59,7 +61,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         assertEquals(0.3, result[2], 0.001);
         assertEquals(0.4, result[3], 0.001);
         assertEquals(0.5, result[4], 0.001);
-        
+
         verify(embeddingModel).embed(inputText);
     }
 
@@ -67,10 +69,12 @@ class LangChain4JVectorEmbeddingGeneratorTest {
     void shouldHandleEmptyText() throws Exception {
         // Given
         String emptyText = "";
-        float[] mockVector = {0.0f, 0.0f, 0.0f};
+        float[] mockVector = { 0.0f, 0.0f, 0.0f };
         Embedding mockEmbedding = Embedding.from(mockVector);
-        
-        when(embeddingModel.embed(emptyText)).thenReturn(Response.from(mockEmbedding));
+
+        when(embeddingModel.embed(emptyText)).thenReturn(
+            Response.from(mockEmbedding)
+        );
 
         // When
         double[] result = generator.generateEmbedding(emptyText);
@@ -81,7 +85,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         assertEquals(0.0, result[0], 0.001);
         assertEquals(0.0, result[1], 0.001);
         assertEquals(0.0, result[2], 0.001);
-        
+
         verify(embeddingModel).embed(emptyText);
     }
 
@@ -91,7 +95,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         assertThrows(IllegalArgumentException.class, () -> {
             generator.generateEmbedding(null);
         });
-        
+
         verify(embeddingModel, never()).embed(anyString());
     }
 
@@ -99,18 +103,20 @@ class LangChain4JVectorEmbeddingGeneratorTest {
     void shouldPropagateEmbeddingModelExceptions() {
         // Given
         String inputText = "Test text";
-        RuntimeException embeddingException = new RuntimeException("Embedding service unavailable");
-        
+        RuntimeException embeddingException = new RuntimeException(
+            "Embedding service unavailable"
+        );
+
         when(embeddingModel.embed(inputText)).thenThrow(embeddingException);
 
         // When/Then
         Exception exception = assertThrows(Exception.class, () -> {
             generator.generateEmbedding(inputText);
         });
-        
+
         assertEquals("Failed to generate embedding", exception.getMessage());
         assertEquals(embeddingException, exception.getCause());
-        
+
         verify(embeddingModel).embed(inputText);
     }
 
@@ -119,17 +125,22 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         // Given
         StringBuilder largeTextBuilder = new StringBuilder();
         for (int i = 0; i < 1000; i++) {
-            largeTextBuilder.append("This is sentence number ").append(i).append(". ");
+            largeTextBuilder
+                .append("This is sentence number ")
+                .append(i)
+                .append(". ");
         }
         String largeText = largeTextBuilder.toString();
-        
+
         float[] mockVector = new float[384]; // Common embedding dimension
         for (int i = 0; i < mockVector.length; i++) {
             mockVector[i] = (float) Math.random();
         }
         Embedding mockEmbedding = Embedding.from(mockVector);
-        
-        when(embeddingModel.embed(largeText)).thenReturn(Response.from(mockEmbedding));
+
+        when(embeddingModel.embed(largeText)).thenReturn(
+            Response.from(mockEmbedding)
+        );
 
         // When
         double[] result = generator.generateEmbedding(largeText);
@@ -137,7 +148,7 @@ class LangChain4JVectorEmbeddingGeneratorTest {
         // Then
         assertNotNull(result);
         assertEquals(384, result.length);
-        
+
         verify(embeddingModel).embed(largeText);
     }
 

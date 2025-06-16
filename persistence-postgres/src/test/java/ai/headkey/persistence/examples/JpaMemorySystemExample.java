@@ -8,10 +8,10 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -370,7 +370,7 @@ public class JpaMemorySystemExample {
      * In production, you would replace this with a real embedding service
      * that uses trained language models.
      */
-    private static class DemoEmbeddingGenerator implements AbstractMemoryEncodingSystem.VectorEmbeddingGenerator {
+    private static class DemoEmbeddingGenerator implements VectorEmbeddingGenerator {
         
         private static final Map<String, double[]> KEYWORD_VECTORS = Map.of(
             "artificial", new double[]{0.9, 0.1, 0.2, 0.3, 0.1},

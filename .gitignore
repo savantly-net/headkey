@@ -44,3 +44,4 @@ dev.properties
 local.mk
 target/
 *.log
+__pycache__/

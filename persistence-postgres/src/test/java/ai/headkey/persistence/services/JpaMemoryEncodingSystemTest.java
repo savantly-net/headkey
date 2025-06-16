@@ -31,12 +31,12 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
 import ai.headkey.memory.exceptions.MemoryNotFoundException;
 import ai.headkey.memory.exceptions.StorageException;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.entities.MemoryEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -716,7 +716,7 @@ class JpaMemoryEncodingSystemTest {
      * Mock embedding generator for testing.
      * Generates predictable embeddings based on content keywords.
      */
-    private static class MockEmbeddingGenerator implements AbstractMemoryEncodingSystem.VectorEmbeddingGenerator {
+    private static class MockEmbeddingGenerator implements VectorEmbeddingGenerator {
         private final Set<String> calledWith = new HashSet<>();
         
         @Override

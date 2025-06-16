@@ -1,4 +1,4 @@
-package ai.headkey.memory.spi;
+package ai.headkey.memory.interfaces;
 
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;

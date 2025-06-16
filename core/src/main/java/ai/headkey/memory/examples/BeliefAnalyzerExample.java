@@ -5,9 +5,9 @@ import ai.headkey.memory.factory.BeliefReinforcementConflictAnalyzerFactory;
 import ai.headkey.memory.implementations.InMemoryBeliefReinforcementConflictAnalyzer;
 import ai.headkey.memory.implementations.InMemoryBeliefStorageService;
 import ai.headkey.memory.implementations.SimplePatternBeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
 import ai.headkey.memory.interfaces.BeliefReinforcementConflictAnalyzer;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 
 import java.time.Instant;
 import java.util.*;

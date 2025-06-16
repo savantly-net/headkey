@@ -4,7 +4,7 @@ import ai.headkey.memory.dto.Belief;
 import ai.headkey.memory.dto.BeliefConflict;
 import ai.headkey.memory.dto.BeliefUpdateResult;
 import ai.headkey.memory.enums.ConflictResolution;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;

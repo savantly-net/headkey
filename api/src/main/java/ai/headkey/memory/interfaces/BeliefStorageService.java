@@ -1,4 +1,4 @@
-package ai.headkey.memory.spi;
+package ai.headkey.memory.interfaces;
 
 import ai.headkey.memory.dto.Belief;
 import ai.headkey.memory.dto.BeliefConflict;

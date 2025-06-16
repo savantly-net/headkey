@@ -3,8 +3,8 @@ package ai.headkey.memory.implementations;
 import java.util.UUID;
 
 import ai.headkey.memory.abstracts.AbstractBeliefReinforcementConflictAnalyzer;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
 
 public class StandardBeliefReinforcementConflictAnalyzer
     extends AbstractBeliefReinforcementConflictAnalyzer {

@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem;
 import ai.headkey.memory.dto.MemoryRecord;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.entities.MemoryEntity;
 import ai.headkey.persistence.factory.JpaMemorySystemFactory;
 import ai.headkey.persistence.services.JpaMemoryEncodingSystem;
@@ -35,7 +35,7 @@ class JpaSimilaritySearchStrategyTest {
     private EntityManager entityManager;
     
     // Mock embedding generator for testing
-    private final AbstractMemoryEncodingSystem.VectorEmbeddingGenerator mockEmbeddingGenerator = 
+    private final VectorEmbeddingGenerator mockEmbeddingGenerator = 
         text -> {
             try {
                 // Simple mock: convert text to vector based on character codes

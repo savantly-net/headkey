@@ -1,18 +1,18 @@
 package ai.headkey.persistence.examples;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
-import ai.headkey.memory.dto.Belief;
-import ai.headkey.memory.dto.SimilarBelief;
-import ai.headkey.memory.spi.BeliefStorageService;
-import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
-import ai.headkey.persistence.repositories.impl.JpaBeliefRepository;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import ai.headkey.memory.dto.Belief;
+import ai.headkey.memory.interfaces.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService.SimilarBelief;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
+import ai.headkey.persistence.factory.JpaBeliefStorageServiceFactory;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 /**
  * Example demonstrating how to use JpaBeliefStorageService with vector embeddings

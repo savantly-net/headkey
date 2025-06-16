@@ -1,7 +1,7 @@
 package ai.headkey.persistence.factory;
 
-import ai.headkey.memory.abstracts.AbstractMemoryEncodingSystem.VectorEmbeddingGenerator;
-import ai.headkey.memory.spi.BeliefStorageService;
+import ai.headkey.memory.interfaces.BeliefStorageService;
+import ai.headkey.memory.interfaces.VectorEmbeddingGenerator;
 import ai.headkey.persistence.repositories.BeliefConflictRepository;
 import ai.headkey.persistence.repositories.BeliefRepository;
 import ai.headkey.persistence.repositories.impl.JpaBeliefConflictRepository;

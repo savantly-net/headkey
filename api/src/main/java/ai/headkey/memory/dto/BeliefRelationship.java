@@ -453,6 +453,64 @@ public class BeliefRelationship {
         this.priority = priority;
     }
     
+    // Fluent setters
+    public BeliefRelationship withId(String id) {
+        this.id = id;
+        return this;
+    }
+    public BeliefRelationship withSourceBeliefId(String sourceBeliefId) {
+        this.sourceBeliefId = sourceBeliefId;
+        return this;
+    }
+    public BeliefRelationship withTargetBeliefId(String targetBeliefId) {
+        this.targetBeliefId = targetBeliefId;
+        return this;
+    }
+    public BeliefRelationship withAgentId(String agentId) {
+        this.agentId = agentId;
+        return this;
+    }
+    public BeliefRelationship withRelationshipType(RelationshipType relationshipType) {
+        this.relationshipType = relationshipType;
+        return this;
+    }
+    public BeliefRelationship withStrength(double strength) {
+        this.strength = Math.max(0.0, Math.min(1.0, strength));
+        return this;
+    }
+    public BeliefRelationship withMetadata(Map<String, Object> metadata) {
+        this.metadata = new HashMap<>(metadata != null ? metadata : new HashMap<>());
+        return this;
+    }
+    public BeliefRelationship withCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+        return this;
+    }
+    public BeliefRelationship withLastUpdated(Instant lastUpdated) {
+        this.lastUpdated = lastUpdated;
+        return this;
+    }
+    public BeliefRelationship withActive(boolean active) {
+        this.active = active;
+        return this;
+    }
+    public BeliefRelationship withEffectiveFrom(Instant effectiveFrom) {
+        this.effectiveFrom = effectiveFrom;
+        return this;
+    }
+    public BeliefRelationship withEffectiveUntil(Instant effectiveUntil) {
+        this.effectiveUntil = effectiveUntil;
+        return this;
+    }
+    public BeliefRelationship withDeprecationReason(String deprecationReason) {
+        this.deprecationReason = deprecationReason;
+        return this;
+    }
+    public BeliefRelationship withPriority(Integer priority) {
+        this.priority = priority;
+        return this;
+    }
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

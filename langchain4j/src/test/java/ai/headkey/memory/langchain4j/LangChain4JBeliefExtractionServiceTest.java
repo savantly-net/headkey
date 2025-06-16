@@ -16,11 +16,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ai.headkey.memory.dto.CategoryLabel;
 import ai.headkey.memory.dto.MemoryRecord;
 import ai.headkey.memory.dto.Metadata;
+import ai.headkey.memory.interfaces.BeliefExtractionService;
+import ai.headkey.memory.interfaces.BeliefExtractionService.ExtractedBelief;
+import ai.headkey.memory.interfaces.BeliefExtractionService.ExtractionContext;
 import ai.headkey.memory.langchain4j.dto.*;
 import ai.headkey.memory.langchain4j.services.ai.*;
-import ai.headkey.memory.spi.BeliefExtractionService;
-import ai.headkey.memory.spi.BeliefExtractionService.ExtractedBelief;
-import ai.headkey.memory.spi.BeliefExtractionService.ExtractionContext;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 
